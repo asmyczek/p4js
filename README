@@ -1,0 +1,6 @@
+Monadic parser combinator library for JavaScript
+
+inspired by Graham Hutton's 
+"Programming in Haskell - Functional Parsers"
+
+

@@ -1,0 +1,33 @@
+<html>
+	<head>
+		<script type="text/javascript" src="src/p4.js"></script>
+	</head>
+	<body>
+		<script type="text/javascript">
+
+			var pret = P4JS._return;
+
+			var item = P4JS._item;
+			var bind = P4JS.bind;
+			var p1 = P4JS._do(item, item, P4JS.doReturn(function(v1, v2) { return v1 + v2 }));
+//			var p1 = P4JS._pdo(item, item, P4JS.doFail() );
+			var p2 = P4JS._choice(P4JS._failure, item);
+			var p3 = P4JS._digit
+			var p4 = P4JS._char('b');
+			var p5 = P4JS._string('aaa');
+			var p6 = P4JS._many(p5);
+            var p7 = P4JS._do(p5, p5, P4JS.doReturn(function(a,b) { return a + b} ));
+
+			var p = p6;
+			var r = P4JS.parse(p, "aaaaatest");
+			if (r !== undefined) {
+				document.writeln(r.value);
+				document.writeln("<br/>");
+				document.writeln(r.input);
+			} else {
+				document.writeln("UNDEFINED");
+			}
+		</script>
+	</body>
+</html>
+
