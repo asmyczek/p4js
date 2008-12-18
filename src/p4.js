@@ -8,7 +8,7 @@
 //
 // 
 // Copyright Adam Smyczek 2008.
-// Licensed under New BSD License(LICENSE.txt)
+// Licensed under New BSD (LICENSE.txt).
 // --------------------------------------------------------------------------
 
 var P4JS = function() {
@@ -20,7 +20,7 @@ var P4JS = function() {
   var isUpper    = function(c) { return ((c >= "A") && (c <= "Z")); };
   var isAlpha    = function(c) { return isLower(c) || isUpper(c); };
   var isAlphaNum = function(c) { return isAlpha(c) || isDigit(c); };
-  var isSpace    = function(c) { return ((c === ' ') || (c === '\n') || (c === '\r') || (c === '\t')); };
+  var isSpace    = function(c) { return ((c === ' ') || (c === '\t')); };
   var isEqual    = function(a, b) { return a === b };
 
   // Function curring, a must ;)
@@ -62,7 +62,7 @@ var P4JS = function() {
     };
   };
 
-  // Recursive bind used by the _do combinator.
+  // Recursive bind used by the _do function.
   var _rec_bind = function(parsers, retfunk, results) {
     if (parsers.length > 0) {
       return _bind(parsers[0], 
@@ -76,26 +76,13 @@ var P4JS = function() {
 
   // Do function
   var _do = function() {
-    var slice = Array.prototype.slice,
-        prs   = slice.apply(arguments),
-        ret   = prs.pop();
-    return _rec_bind(prs, ret, []);
-  };
-
-  // Helper function for _do is be the only argument
-  // passed to the _do combinator. Function f processes
-  // the results of all combinators defied in do, for example:
-  // _do(_item, _item, doReturn(function(a,b) { return a + b; }))
-  var doReturn = function (f) {
-      return function() { 
-          return _return(f.apply(null, arguments)); 
-      };
-  };
-
-  // Helper function for _do that causes _do to fail, used mostly
-  // for testing
-  var doFail = function() {
-      return function() { return _failure; };
+    var parsers = Array.prototype.slice.apply(arguments),
+        bind_parser = function(f) { return _rec_bind(parsers, f, []); };
+    return {
+        doReturn : function(f) { return bind_parser(function() { return _return(f.apply(null, arguments)); }); },
+        doResult : function(f) { return bind_parser(f); },
+        doFail   : function(f) { return _failure; }
+    };
   };
 
   // -- Basic parser combinators --------------------------------------------
@@ -108,8 +95,7 @@ var P4JS = function() {
 
   // Parses next item if it satisfies f, otherwise fails.
   var _sat = function(f) {
-    return _do(_item, 
-        function(v) { return (f(v))? _return(v) : _failure; });
+    return _do(_item).doResult(function(v) { return (f(v))? _return(v) : _failure; });
   };
 
   // Try p1 and if it fails use p2 to parse input.
@@ -130,7 +116,7 @@ var P4JS = function() {
     if (str.length > 0) {
         var c  = str.charAt(0),
             cs = str.substring(1);
-        return _do(_char(c), _string(cs), doReturn(function(a, b) { return a + b; }));
+        return _do(_char(c), _string(cs)).doReturn(function(a, b) { return a + b; });
     };
     return _return("");
   };
@@ -143,32 +129,35 @@ var P4JS = function() {
   // 
   // Shame, JavaScript is not lazy, otherwise _many1 could be implemented 
   // simple as:
-  // _do(p, _return(""), doReturn(function(a, b) { return a.concat(b); }));
+  // _do(p, _return("")).doReturn(function(a, b) { return a.concat(b); });
   var _many1 = function(p) {
     return function(input) {
       var v = parse(p, input);
       return (v === undefined)? undefined : 
-        parse(_do(_many(p), doReturn(function(a) { return v.value + a; })), v.input);
+        parse(_do(_many(p)).doReturn(function(a) { return v.value + a; }), v.input);
     };
   };
 
   // -- Tokenizer -----------------------------------------------------------
 
   // Truncates leading spaces from a input
-  var _space = _do(_many(_sat(isSpace)), doReturn(function(a) { return ""; }));
+  var _space = _do(_many(_sat(isSpace))).doReturn(function(a) { return ""; });
 
   // Ignore spacing around to parsed input
   var _token = function(p) {
-    return _do(_space, p, _space, doReturn(function(a,b,c) { return b; }));
+    return _do(_space, p, _space).doReturn(function(a,b,c) { return b; });
   };
 
   // Parse next char sequence
-  var _seq = _token(_many(_char));
+  var _seq = _token(_many(_sat(isAlphaNum)));
 
   // Parse next symbol str
   var _symbol = function(str) {
     return _token(_string(str));
   };
+
+  // Parse new line
+  var _newLine = _choice(_symbol("\n\r"), _symbol("\n"));
 
   // -- Parser executor functions -------------------------------------------
 
@@ -184,8 +173,6 @@ var P4JS = function() {
   p._failure  = _failure;
 
   p._do       = _do;
-  p.doReturn  = doReturn;
-  p.doFail    = doFail;
 
   p._item     = _item;
   p._digit    = _sat(isDigit);
@@ -204,6 +191,7 @@ var P4JS = function() {
   p._token    = _token;
   p._seq      = _seq;
   p._symbol   = _symbol;
+  p._newLine  = _newLine;
 
   p.parse = parse;
 
