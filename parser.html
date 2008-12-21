@@ -6,22 +6,23 @@
 		<script type="text/javascript">
 
             var p = P4JS;
+            var a = p._char('a');
 
-			var p1 = p._do(p._item, p._item).doReturn(function(v1, v2) { return v1 + v2 });
+//			var p1 = p._do(p._item, p._item).doReturn(function(v1, v2) { return v1 + v2 });
+//          var p6 = p._do(a,a,a,a).doReturn(function(a,b,c,d) { return a+b+c+d; } );
 //			var p1 = P4JS._pdo(item, item, P4JS.doFail() );
 //			var p2 = P4JS._choice(P4JS._failure, item);
 //			var p3 = P4JS._digit
 //			var p4 = P4JS._char('b');
 			var p5 = p._string('aaa');
-			var p6 = p._many(p._digit);
+            var p6 = p._many(p5);
 //			var p7 = P4JS._do(p5, p5).doReturn(function(a,b) { return a + b} );	
 //			var p8 = P4JS._space;
 //			var p9 = P4JS._token(P4JS._many(p3));
 //            var p10 = P4JS._manyTill(item, P4JS._char(","));
             
-
-			var p = p1;
-			var r = P4JS.parse(p, "1234 aa");
+			var p = p6;
+			var r = P4JS.parse(p, "aaaaaaaaa,abc");
 			if (r !== undefined) {
 				document.writeln(r.value);
 				document.writeln("<br/>");

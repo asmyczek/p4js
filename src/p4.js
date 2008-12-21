@@ -18,6 +18,17 @@ var P4JS = function() {
   var isSpace    = function(c) { return ((c === ' ') || (c === '\t')); };
   var isEqual    = function(a, b) { return a === b };
 
+  // Join arguments usefull for many... parsers
+  var joinArgs = function() {
+    var args = Array.prototype.slice.apply(arguments); 
+    return args.join("");
+  };
+
+  // Convert function arguments to an array
+  var args2Array = function() {
+    return Array.prototype.slice.apply(arguments);
+  };
+
   // Function curring, a must ;)
   var curry = function(funk) {
     return function() {
@@ -115,14 +126,14 @@ var P4JS = function() {
 
   // Many combinator
   var _many = function(p) {
-    return _choice(_many1(p), _return([1, 2]));
+    return _choice(_many1(p), _return([]));
   };
 
   // Many1
   // JavaScript is not lazy, so the inner parser function is required
   var _many1 = function(p) {
     return function(input) {
-      var mp = _do(p, _many(p)).doReturn(function(a,b) { return a.concat(b); });
+      var mp = _do(p, _many(p)).doReturn(args2Array);
       return parse(mp, input);
     };
   };
@@ -155,9 +166,9 @@ var P4JS = function() {
     return function(input) {
       var br = parse(b, input);
       if (br === undefined) {
-        return parse(_do(p, _manyTill(p, b)).doReturn(function(v, vs) { return [v].concat(vs); }), input);
+        return parse(_do(p, _manyTill(p, b)).doReturn(args2Array), input);
       } else {
-        return parse(_return(""), input);
+        return parse(_return([]), input);
       }
     };
   };
@@ -196,6 +207,10 @@ var P4JS = function() {
   p._newLine  = _newLine;
 
   p._manyTill = _manyTill;
+
+  // utils
+  p.joinArgs    = joinArgs;
+  p.args2Array = args2Array;
 
   p.parse = parse;
 
