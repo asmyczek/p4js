@@ -1,12 +1,7 @@
 // --------------------------------------------------------------------------
-// Monadic JavaScript parser combinator library
+// Monadic parser combinator library for JavaScript
 // inspired by Graham Hutton's "Programming in Haskell - Functional Parsers"
 //
-// 
-// A Parser is a function from an input string to a type and the not
-// parsed rest of the input: input -> { value, input }.
-//
-// 
 // Copyright Adam Smyczek 2008.
 // Licensed under New BSD (LICENSE.txt).
 // --------------------------------------------------------------------------
@@ -34,31 +29,21 @@ var P4JS = function() {
     };
   };
 
-  // Helper function to create the parser result, an object that contains
-  // the parsed value and the rest of the input.
-  var mkResult = function(value, rest) {
-    return { value : value, input : rest };
-  }
-
   // -- Monadic operators ---------------------------------------------------
  
   // return
   var _return = function(value) {
-    return function (input) { return mkResult(value, input); };
+    return function (input) { return { value : value, input : input } };
   };
 
   // failure
   var _failure = function (input) { return undefined; };
 
-  // bind (>>=)
+  // bind
   var _bind = function(p, f) {
     return function(input) {
       var v = parse(p, input);
-      if (v === undefined) {
-        return undefined;
-      } else {
-        return parse(f(v.value), v.input);
-      }
+      return (v === undefined)? undefined : parse(f(v.value), v.input);
     };
   };
 
@@ -74,7 +59,14 @@ var P4JS = function() {
     }
   };
 
-  // Do function
+  // Do function takes parsers as arguments in the order of execution
+  // and returns an object that provides following functions:
+  // - doReturn(f) : applies the function f to the result array of all parsers
+  //                 and returns the parser.
+  // - doResult(f) : applies the function f to the array result, but do not return
+  //                 the parser. The function f has to return _return(..) or _failure;
+  // - doFail()    : forces the parser to fail, not very common.
+  //
   var _do = function() {
     var parsers = Array.prototype.slice.apply(arguments),
         bind_parser = function(f) { return _rec_bind(parsers, f, []); };
@@ -90,7 +82,7 @@ var P4JS = function() {
   // Consume one char from input.
   var _item = function (input) {
     return (input === undefined)? undefined : 
-      mkResult(input[0], input.slice(1));
+      parse(_return(input[0]), input.slice(1));
   };
 
   // Parses next item if it satisfies f, otherwise fails.
@@ -121,20 +113,17 @@ var P4JS = function() {
     return _return("");
   };
 
-  // 
+  // Many combinator
   var _many = function(p) {
-    return _choice(_many1(p), _return(""));
+    return _choice(_many1(p), _return([1, 2]));
   };
 
-  // 
-  // Shame, JavaScript is not lazy, otherwise _many1 could be implemented 
-  // simple as:
-  // _do(p, _return("")).doReturn(function(a, b) { return a.concat(b); });
+  // Many1
+  // JavaScript is not lazy, so the inner parser function is required
   var _many1 = function(p) {
     return function(input) {
-      var v = parse(p, input);
-      return (v === undefined)? undefined : 
-        parse(_do(_many(p)).doReturn(function(a) { return v.value + a; }), v.input);
+      var mp = _do(p, _many(p)).doReturn(function(a,b) { return a.concat(b); });
+      return parse(mp, input);
     };
   };
 
@@ -159,13 +148,26 @@ var P4JS = function() {
   // Parse new line
   var _newLine = _choice(_symbol("\n\r"), _symbol("\n"));
 
-  // -- Parser executor functions -------------------------------------------
+  // -- Heigher abstraction level combinators -------------------------------
 
+  // try p until b matches
+  var _manyTill = function(p, b) {
+    return function(input) {
+      var br = parse(b, input);
+      if (br === undefined) {
+        return parse(_do(p, _manyTill(p, b)).doReturn(function(v, vs) { return [v].concat(vs); }), input);
+      } else {
+        return parse(_return(""), input);
+      }
+    };
+  };
+
+  // -- Parser executor functions -------------------------------------------
   var parse = function (parser, input) {
     return parser(input);
   };
 
-  // -- Parser object exporting public functions ----------------------------
+  // -- The Parser object exports public functions --------------------------
  
   var p = { }
 
@@ -192,6 +194,8 @@ var P4JS = function() {
   p._seq      = _seq;
   p._symbol   = _symbol;
   p._newLine  = _newLine;
+
+  p._manyTill = _manyTill;
 
   p.parse = parse;
 
