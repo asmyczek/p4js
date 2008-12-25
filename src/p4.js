@@ -18,15 +18,21 @@ var P4JS = function() {
   var isSpace    = function(c) { return ((c === ' ') || (c === '\t')); };
   var isEqual    = function(a, b) { return a === b };
 
-  // Join arguments usefull for many... parsers
-  var joinArgs = function() {
-    var args = Array.prototype.slice.apply(arguments); 
-    return args.join("");
+  // Convert function arguments to an array
+  var args2array = function(f) {
+    return function() {
+      var args = Array.prototype.slice.apply(arguments);
+      return (f === undefined)? args : f(args);
+    }
   };
 
-  // Convert function arguments to an array
-  var args2Array = function() {
-    return Array.prototype.slice.apply(arguments);
+  // Join arguments usefull for many... parsers
+  var joinArgs = function(joinChar, f) {
+    var jc = joinChar || "";
+    return function() {
+      var args = Array.prototype.slice.apply(arguments).join(jc);
+      return (f === undefined)? args : f(args);
+    };
   };
 
   // Function curring, a must ;)
@@ -133,7 +139,7 @@ var P4JS = function() {
   // JavaScript is not lazy, so the inner parser function is required
   var _many1 = function(p) {
     return function(input) {
-      var mp = _do(p, _many(p)).doReturn(args2Array);
+      var mp = _do(p, _many(p)).doReturn(args2array());
       return parse(mp, input);
     };
   };
@@ -157,7 +163,7 @@ var P4JS = function() {
   };
 
   // Parse new line
-  var _newLine = _choice(_symbol("\n\r"), _symbol("\n"));
+  var _eol = _symbol("\n");
 
   // -- Heigher abstraction level combinators -------------------------------
 
@@ -166,12 +172,39 @@ var P4JS = function() {
     return function(input) {
       var br = parse(b, input);
       if (br === undefined) {
-        return parse(_do(p, _manyTill(p, b)).doReturn(args2Array), input);
+        return parse(_do(p, _manyTill(p, b)).doReturn(args2array()), input);
       } else {
         return parse(_return([]), input);
       }
     };
   };
+
+  // -- CSV parser ----------------------------------------------------------
+
+  // single value parser
+  var _csv_sep   = p._choice(p._char(','), p._eol);
+  var _csv_value = p._do(p._manyTill(p._item, _csv_sep)).doReturn(p.joinArgs());
+
+  // Same as for many many1 inplementation, we have to 
+  // wrap the parser into a function
+  var _csv_values = function(input) {
+    var vp = p._do(_csv_value, _csv_next_value).doReturn(p.args2array());
+    return p.parse(vp, input);
+  };
+
+  // parse next value
+  var _csv_next_value = p._choice(
+        p._do(p._char(","), _csv_values).doReturn(p.args2array(function(a) { return a.slice(1); })), 
+        p._return([])
+      );
+
+  var _csv_line = p._do(_csv_values, p._eol).doReturn(p.args2array(function(a) { return a.reverse().slice(1).reverse(); }));
+
+  // and the csv parser
+  var _csv = p._many(_csv_line);
+
+
+
 
   // -- Parser executor functions -------------------------------------------
   var parse = function (parser, input) {
@@ -182,38 +215,42 @@ var P4JS = function() {
  
   var p = { }
 
-  p._return   = _return;
-  p._failure  = _failure;
+  p._return     = _return;
+  p._failure    = _failure;
 
-  p._do       = _do;
+  p._do         = _do;
 
-  p._item     = _item;
-  p._digit    = _sat(isDigit);
-  p._alpha    = _sat(isAlpha);
-  p._alphanum = _sat(isAlphaNum);
-  p._lower    = _sat(isLower);
-  p._upper    = _sat(isUpper);
+  p._item       = _item;
+  p._digit      = _sat(isDigit);
+  p._alpha      = _sat(isAlpha);
+  p._alphanum   = _sat(isAlphaNum);
+  p._lower      = _sat(isLower);
+  p._upper      = _sat(isUpper);
 
-  p._choice   = _choice;
-  p._char     = _char
-  p._string   = _string
-  p._many     = _many;
-  p._many1    = _many1;
+  p._choice     = _choice;
+  p._char       = _char
+  p._string     = _string
+  p._many       = _many;
+  p._many1      = _many1;
 
-  p._space    = _space;
-  p._token    = _token;
-  p._seq      = _seq;
-  p._symbol   = _symbol;
-  p._newLine  = _newLine;
+  p._space      = _space;
+  p._token      = _token;
+  p._seq        = _seq;
+  p._symbol     = _symbol;
+  p._eol        = _eol;
 
-  p._manyTill = _manyTill;
+  p._manyTill   = _manyTill;
 
-  // utils
+  // Parser executor
+  p.parse       = parse;
+
+  // Utils
   p.joinArgs    = joinArgs;
-  p.args2Array = args2Array;
+  p.args2array  = args2array;
+  p.curry       = curry;
 
-  p.parse = parse;
-
+  // Concrete parsers
+  p._csv        = _csv;
   return p;
 
 }();
