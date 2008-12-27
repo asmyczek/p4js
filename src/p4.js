@@ -1,6 +1,7 @@
 // --------------------------------------------------------------------------
 // Monadic parser library for JavaScript
 // inspired by Graham Hutton's "Programming in Haskell - Functional Parsers"
+// See README for details.
 //
 //
 // Copyright Adam Smyczek 2008.
@@ -66,7 +67,7 @@ var P4JS = function() {
     };
   };
 
-  // Join arguments usefull for many... parsers
+  // Join arguments useful for many... parsers
   var joinArgs = function(joinChar, f) {
     var jc = joinChar || "";
     return function() {
@@ -226,7 +227,7 @@ var P4JS = function() {
   // Single value parser
   var _csv_value = _do(_manyTill(_item, _choice(_char(','), _eol, _eof))).doReturn(function (r) { return r.join(""); });
 
-  // Same as for many many1 inplementation, we have to 
+  // Same as for many many1 implementation, we have to 
   // wrap the parser into a function
   var _csv_values = function(input) {
     var vp = _do(_csv_value, _csv_next_value).doReturn(consArgs);
