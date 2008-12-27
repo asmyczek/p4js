@@ -1,9 +1,38 @@
 // --------------------------------------------------------------------------
-// Monadic parser combinator library for JavaScript
+// Monadic parser library for JavaScript
 // inspired by Graham Hutton's "Programming in Haskell - Functional Parsers"
 //
+//
 // Copyright Adam Smyczek 2008.
-// Licensed under New BSD (LICENSE.txt).
+// All rights reserved.
+// 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are
+// met:
+// 
+//     * Redistributions of source code must retain the above copyright
+//       notice, this list of conditions and the following disclaimer.
+// 
+//     * Redistributions in binary form must reproduce the above
+//       copyright notice, this list of conditions and the following
+//       disclaimer in the documentation and/or other materials provided
+//       with the distribution.
+// 
+//     * Neither the name the author nor the names of other
+//       contributors may be used to endorse or promote products derived
+//       from this software without specific prior written permission.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // --------------------------------------------------------------------------
 
 var P4JS = function() {
@@ -18,21 +47,12 @@ var P4JS = function() {
   var isSpace    = function(c) { return ((c === ' ') || (c === '\t')); };
   var isEqual    = function(a, b) { return a === b };
 
-  // Convert function arguments to an array
-  var args2array = function(f) {
-    return function() {
-      var args = Array.prototype.slice.apply(arguments);
-      return (f === undefined)? args : f(args);
-    }
-  };
-
-  // Join arguments usefull for many... parsers
-  var joinArgs = function(joinChar, f) {
-    var jc = joinChar || "";
-    return function() {
-      var args = Array.prototype.slice.apply(arguments).join(jc);
-      return (f === undefined)? args : f(args);
-    };
+  // Custom cons, adds a to the as array
+  var cons = function(a, as) {
+    var r = as.slice();
+    r.unshift("");
+    r[0] = a;
+    return r;
   };
 
   // Function curring, a must ;)
@@ -44,6 +64,20 @@ var P4JS = function() {
             args.concat(Array.prototype.slice.apply(arguments)));
       };
     };
+  };
+
+  // Join arguments usefull for many... parsers
+  var joinArgs = function(joinChar, f) {
+    var jc = joinChar || "";
+    return function() {
+      var args = Array.prototype.slice.apply(arguments).join(jc);
+      return (f === undefined)? args : f(args);
+    };
+  };
+
+  // Cons arguments
+  var consArgs = function(a, as) {
+    return cons(a, as);
   };
 
   // -- Monadic operators ---------------------------------------------------
@@ -69,7 +103,9 @@ var P4JS = function() {
     if (parsers.length > 0) {
       return _bind(parsers[0], 
         function(v) { 
-          return _rec_bind(parsers.slice(1), retfunk, results.concat(v));
+          var r = results.slice();
+          r[results.length] = v;
+          return _rec_bind(parsers.slice(1), retfunk, r);
         });
     } else {
       return retfunk.apply(null, results);
@@ -98,7 +134,7 @@ var P4JS = function() {
 
   // Consume one char from input.
   var _item = function (input) {
-    return (input === undefined)? undefined : 
+    return (input === undefined || input === "")? undefined : 
       parse(_return(input[0]), input.slice(1));
   };
 
@@ -107,11 +143,15 @@ var P4JS = function() {
     return _do(_item).doResult(function(v) { return (f(v))? _return(v) : _failure; });
   };
 
-  // Try p1 and if it fails use p2 to parse input.
-  var _choice = function(p1, p2) {
+  // Try the parsers in the order passed and return undefined if no match
+  var _choice = function() {
+    var parsers = Array.prototype.slice.apply(arguments);
     return function(input) {
-      var v = parse(p1, input);
-      return (v !== undefined)? v : parse(p2, input);
+      if (parsers.length > 0) {
+        var v = parse(parsers[0], input);
+        return (v !== undefined)? v : parse(_choice.apply(null, parsers.slice(1)), input);
+      }
+      return undefined;
     };
   };
 
@@ -119,7 +159,7 @@ var P4JS = function() {
   var _char = function(v) {
     return _sat(curry(isEqual)(v));
   };
-  
+
   // Same as _char but for a string
   var _string = function(str) {
     if (str.length > 0) {
@@ -131,7 +171,7 @@ var P4JS = function() {
   };
 
   // Many combinator
-  var _many = function(p) {
+  var _many =function(p) {
     return _choice(_many1(p), _return([]));
   };
 
@@ -139,9 +179,19 @@ var P4JS = function() {
   // JavaScript is not lazy, so the inner parser function is required
   var _many1 = function(p) {
     return function(input) {
-      var mp = _do(p, _many(p)).doReturn(args2array());
+      var mp = _do(p, _many(p)).doReturn(consArgs);
       return parse(mp, input);
     };
+  };
+
+  // try p until b matches
+  var _manyTill = function(p, b) {
+    var _mt = function(input) {
+      return parse((parse(b, input))? _return([]) :
+              _do(p, _mt).doReturn(consArgs),
+          input);
+    };
+    return _mt;
   };
 
   // -- Tokenizer -----------------------------------------------------------
@@ -165,46 +215,42 @@ var P4JS = function() {
   // Parse new line
   var _eol = _symbol("\n");
 
-  // -- Heigher abstraction level combinators -------------------------------
-
-  // try p until b matches
-  var _manyTill = function(p, b) {
-    return function(input) {
-      var br = parse(b, input);
-      if (br === undefined) {
-        return parse(_do(p, _manyTill(p, b)).doReturn(args2array()), input);
-      } else {
-        return parse(_return([]), input);
-      }
-    };
-  };
+  // EOF or end of input parser
+  var _eof = function(input) {
+    if (input === undefined || input === "") return _return("");
+    return undefined;
+  }
 
   // -- CSV parser ----------------------------------------------------------
 
-  // single value parser
-  var _csv_sep   = p._choice(p._char(','), p._eol);
-  var _csv_value = p._do(p._manyTill(p._item, _csv_sep)).doReturn(p.joinArgs());
+  // Single value parser
+  var _csv_value = _do(_manyTill(_item, _choice(_char(','), _eol, _eof))).doReturn(function (r) { return r.join(""); });
 
   // Same as for many many1 inplementation, we have to 
   // wrap the parser into a function
   var _csv_values = function(input) {
-    var vp = p._do(_csv_value, _csv_next_value).doReturn(p.args2array());
-    return p.parse(vp, input);
+    var vp = _do(_csv_value, _csv_next_value).doReturn(consArgs);
+    return parse(vp, input);
   };
 
-  // parse next value
-  var _csv_next_value = p._choice(
-        p._do(p._char(","), _csv_values).doReturn(p.args2array(function(a) { return a.slice(1); })), 
-        p._return([])
-      );
+  // Parse next value
+  var _csv_next_value = _choice(
+        _do(_char(","), _csv_values).doReturn(function(_,vs) { return vs; }), 
+        _return([]));
 
-  var _csv_line = p._do(_csv_values, p._eol).doReturn(p.args2array(function(a) { return a.reverse().slice(1).reverse(); }));
+  // Parse lines
+  var _csv_lines = function(input) {
+    var vp = _do(_csv_values, _csv_next_line).doReturn(consArgs);
+    return parse(vp, input);
+  };
+
+  // Next line or eol
+  var _csv_next_line = _choice(
+        _do(_eol, _csv_lines).doReturn(function(_,ls) { return ls; }), 
+        _return([]));
 
   // and the csv parser
-  var _csv = p._many(_csv_line);
-
-
-
+  var _csv = _csv_lines;
 
   // -- Parser executor functions -------------------------------------------
   var parse = function (parser, input) {
@@ -213,7 +259,7 @@ var P4JS = function() {
 
   // -- The Parser object exports public functions --------------------------
  
-  var p = { }
+  var p = { };
 
   p._return     = _return;
   p._failure    = _failure;
@@ -244,13 +290,9 @@ var P4JS = function() {
   // Parser executor
   p.parse       = parse;
 
-  // Utils
-  p.joinArgs    = joinArgs;
-  p.args2array  = args2array;
-  p.curry       = curry;
-
   // Concrete parsers
   p._csv        = _csv;
+
   return p;
 
 }();
