@@ -7,30 +7,16 @@
 
             var p = P4JS;
 
-//			var p1 = p._do(p._item, p._item).doReturn(function(v1, v2) { return v1 + v2 });
-//          var p6 = p._do(a,a,a,a).doReturn(function(a,b,c,d) { return a+b+c+d; } );
-//			var p1 = P4JS._pdo(item, item, P4JS.doFail() );
-//			var p2 = P4JS._choice(P4JS._failure, item);
-//			var p3 = P4JS._digit
-//			var p4 = P4JS._char('b');
-//			var p5 = p._string('aa');
-//          var p6 = p._many(p5);
-//			var p7 = P4JS._do(p5, p5).doReturn(function(a,b) { return a + b} );	
-//			var p8 = P4JS._space;
-//			var p9 = P4JS._token(P4JS._many(p3));
-//            var p10 = p._manyTill(p._char('a'), p._eol);
-//			var p11 = p._choice(p._char('a'), p._char('b'), p._char('c'));
-            
 			var text = "11,12,13\n21,22,23\n31,32,33";
 			
+            var d = p._digit;
+//            var par = p._do(d, d, p._char(","), d, d).doReturn(function(a,b) { return a + b;} );
 			var par = p._csv;
-			var r = p.parse(par, text);
-			if (r !== undefined) {
-				document.writeln(r.value);
-				document.writeln("<br/><br/>");
-				document.writeln(r.input);
-			} else {
-				document.writeln("UNDEFINED");
+            try {
+              var r = p.parse(par, text);
+			  document.writeln(r);
+			} catch(e) {
+				document.writeln(e.line);
 			}
 		</script>
 	</body>

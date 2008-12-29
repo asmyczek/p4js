@@ -81,21 +81,35 @@ var P4JS = function() {
     return cons(a, as);
   };
 
+  var mkState = function(input, line, column) {
+    return { input  : input, 
+             line   : line || 0, 
+             column : column  || 0 };
+  };
+
+  // Create error object
+  var mkError = function(message, state) {
+    return { message : message,
+             line    : state.line,
+             column  : state.column,
+             input   : state.input };
+  };
+
   // -- Monadic operators ---------------------------------------------------
  
   // return
   var _return = function(value) {
-    return function (input) { return { value : value, input : input } };
+    return function (state) { return { value : value, state : state } };
   };
 
   // failure
-  var _failure = function (input) { return undefined; };
+  var _failure = function (state) { throw mkError("Failure called!", state); };
 
   // bind
   var _bind = function(p, f) {
-    return function(input) {
-      var v = parse(p, input);
-      return (v === undefined)? undefined : parse(f(v.value), v.input);
+    return function(state) {
+      var v = parse(p, state);
+      return parse(f(v.value), v.state);
     };
   };
 
@@ -134,9 +148,16 @@ var P4JS = function() {
   // -- Basic parser combinators --------------------------------------------
 
   // Consume one char from input.
-  var _item = function (input) {
-    return (input === undefined || input === "")? undefined : 
-      parse(_return(input[0]), input.slice(1));
+  var _item = function (state) {
+    if (state === undefined || state.input === "") {
+      throw mkError("Invalid input: " + state, state);
+    } else {
+      var v  = state.input[0],
+          vs = state.input.slice(1),
+          st = (isEqual(v, "\n"))? mkState(vs, state.line + 1, 0) :
+                                   mkState(vs, state.line, state.column + 1);
+        return parse(_return(v), st);
+    }
   };
 
   // Parses next item if it satisfies f, otherwise fails.
@@ -147,12 +168,15 @@ var P4JS = function() {
   // Try the parsers in the order passed and return undefined if no match
   var _choice = function() {
     var parsers = Array.prototype.slice.apply(arguments);
-    return function(input) {
+    return function(state) {
       if (parsers.length > 0) {
-        var v = parse(parsers[0], input);
-        return (v !== undefined)? v : parse(_choice.apply(null, parsers.slice(1)), input);
+        try {
+          return parse(parsers[0], state);
+        } catch(e) {
+          return parse(_choice.apply(null, parsers.slice(1)), state);
+        }
       }
-      return undefined;
+      throw mkError("No match for _choice!", input);
     };
   };
 
@@ -179,18 +203,22 @@ var P4JS = function() {
   // Many1
   // JavaScript is not lazy, so the inner parser function is required
   var _many1 = function(p) {
-    return function(input) {
+    return function(state) {
       var mp = _do(p, _many(p)).doReturn(consArgs);
-      return parse(mp, input);
+      return parse(mp, state);
     };
   };
 
   // try p until b matches
+  // TODO: try without try-catch
   var _manyTill = function(p, b) {
-    var _mt = function(input) {
-      return parse((parse(b, input))? _return([]) :
-              _do(p, _mt).doReturn(consArgs),
-          input);
+    var _mt = function(state) {
+      try {
+        parse(b, state);
+        return parse(_return([]), state);
+      } catch (e) {
+        return parse(_do(p, _mt).doReturn(consArgs), state);
+      }
     };
     return _mt;
   };
@@ -217,9 +245,9 @@ var P4JS = function() {
   var _eol = _symbol("\n");
 
   // EOF or end of input parser
-  var _eof = function(input) {
-    if (input === undefined || input === "") return _return("");
-    return undefined;
+  var _eof = function(state) {
+    if (state === undefined || state.input === "") return _return("");
+    throw mkError("Not EOF!", state);
   }
 
   // -- CSV parser ----------------------------------------------------------
@@ -229,9 +257,9 @@ var P4JS = function() {
 
   // Same as for many many1 implementation, we have to 
   // wrap the parser into a function
-  var _csv_values = function(input) {
+  var _csv_values = function(state) {
     var vp = _do(_csv_value, _csv_next_value).doReturn(consArgs);
-    return parse(vp, input);
+    return parse(vp, state);
   };
 
   // Parse next value
@@ -240,9 +268,9 @@ var P4JS = function() {
         _return([]));
 
   // Parse lines
-  var _csv_lines = function(input) {
+  var _csv_lines = function(state) {
     var vp = _do(_csv_values, _csv_next_line).doReturn(consArgs);
-    return parse(vp, input);
+    return parse(vp, state);
   };
 
   // Next line or eol
@@ -254,8 +282,8 @@ var P4JS = function() {
   var _csv = _csv_lines;
 
   // -- Parser executor functions -------------------------------------------
-  var parse = function (parser, input) {
-    return parser(input);
+  var parse = function (parser, state) {
+    return parser(state);
   };
 
   // -- The Parser object exports public functions --------------------------
@@ -289,7 +317,9 @@ var P4JS = function() {
   p._manyTill   = _manyTill;
 
   // Parser executor
-  p.parse       = parse;
+  p.parse       = function(parser, input) {
+                    return parse(parser, mkState(input)).value;
+                  };
 
   // Concrete parsers
   p._csv        = _csv;
