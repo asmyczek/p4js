@@ -1,4 +1,5 @@
 Monadic parser library for JavaScript,
 inspired by Graham Hutton's "Programming in Haskell - Functional Parsers".
 
+Status: Proof of concept
 

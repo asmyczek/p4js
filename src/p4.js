@@ -81,6 +81,13 @@ var P4JS = function() {
     return cons(a, as);
   };
 
+  // Create Parser
+  var mkParser = function(value, state) {
+    return { value : value,
+             state : state };
+  };
+
+  // Create parse state
   var mkState = function(input, line, column) {
     return { input  : input, 
              line   : line || 0, 
@@ -99,11 +106,13 @@ var P4JS = function() {
  
   // return
   var _return = function(value) {
-    return function (state) { return { value : value, state : state } };
+    return function (state) { return mkParser(value, state); };
   };
 
   // failure
-  var _failure = function (state) { throw mkError("Failure called!", state); };
+  var _failure = function(error_msg) {
+    return function (state) { throw mkError(error_msg, state); };
+  };
 
   // bind
   var _bind = function(p, f) {
@@ -139,9 +148,9 @@ var P4JS = function() {
     var parsers = Array.prototype.slice.apply(arguments),
         bind_parser = function(f) { return _rec_bind(parsers, f, []); };
     return {
-        doReturn : function(f) { return bind_parser(function() { return _return(f.apply(null, arguments)); }); },
-        doResult : function(f) { return bind_parser(f); },
-        doFail   : function(f) { return _failure; }
+        doReturn : function(f)         { return bind_parser(function() { return _return(f.apply(null, arguments)); }); },
+        doResult : function(f)         { return bind_parser(f); },
+        doFail   : function(error_msg) { return _failure(error_msg); }
     };
   };
 
@@ -156,13 +165,13 @@ var P4JS = function() {
           vs = state.input.slice(1),
           st = (isEqual(v, "\n"))? mkState(vs, state.line + 1, 0) :
                                    mkState(vs, state.line, state.column + 1);
-        return parse(_return(v), st);
+        return mkParser(v, st);
     }
   };
 
   // Parses next item if it satisfies f, otherwise fails.
   var _sat = function(f) {
-    return _do(_item).doResult(function(v) { return (f(v))? _return(v) : _failure; });
+    return _do(_item).doResult(function(v) { return (f(v))? _return(v) : _failure("Sat failure."); });
   };
 
   // Try the parsers in the order passed and return undefined if no match
