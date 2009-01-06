@@ -244,7 +244,7 @@ var P4JS = function() {
   };
 
   // Parse next char sequence
-  var _seq = _token(_many(_sat(isAlphaNum, "Not an AlphaNum!")));
+  var _seq = _do(_token(_many(_sat(isAlphaNum, "Not an AlphaNum!")))).doReturn(function(r) { return r.join(""); });
 
   // Parse next symbol str
   var _symbol = function(str) {

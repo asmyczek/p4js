@@ -42,7 +42,6 @@
             } catch(e) {
               ok(desc);
             }
-
           };
 
 		</script>
@@ -50,6 +49,7 @@
 	<body>
 		<h3>P4JS - Unit tests</h3>
 
+		<p>
         <div><b>Basic combinators</b></div>
 		<script type="text/javascript">
 		assert(p._return("abc"), "abc", "abc", "_return");
@@ -73,21 +73,32 @@
         assert(p._do(p._many1(p._digit)).doReturn(function(r) { return r.join(""); }), "123", "123", "_many1");
         assertException(p._do(p._many1(p._digit)).doReturn(function(r) { return r.join(""); }), "", "_many1(empty)");
 
-/*
+		assert(p._do(p._manyTill(p._item, p._char(","))).doReturn(function(r) { return r.join(""); }), "abc,", "abc", "_manyTill");
+		assert(p._oneOf("abc"), "abc,", "a", "_oneOf");
+		assertException(p._oneOf("abc"), "1abc,", "_oneOf(negative)");
+		assert(p._noneOf("abc"), "123,", "1", "_noneOf");
+		assertException(p._noneOf("abc"), "abc,", "_noneOf(negative)");
 
-  p._space      = _space;
-  p._token      = _token;
-  p._seq        = _seq;
-  p._symbol     = _symbol;
-  p._eol        = _eol;
-
-  p._manyTill   = _manyTill;
-  p._oneOf      = _oneOf;
-  p._noneOf     = _noneOf;
-  
-  p._csv        = _csv;
-*/
 		</script>
+		</p>
+
+		<p>
+		<div><b>Tokenizer</b></div>
+		<script type="text/javascript">
+		assert(p._space, "  ab1", "", "_space");
+		assert(p._token(p._string("ab1")), "  ab1   ", "ab1", "_token");
+		assert(p._seq, "  ab1   ", "ab1", "_seq");
+		assert(p._symbol("ab1"), "  ab1   ", "ab1", "_symbol");
+		assert(p._eol, "\n", "\n", "_eol");
+		</script>
+		</p>
+
+		<p>
+		<div><b>Parsers</b></div>
+		<script type="text/javascript">
+		</script>
+		</p>
+
 
 	</body>
 </html>
