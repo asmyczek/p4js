@@ -4,7 +4,7 @@
 // See README for details.
 //
 //
-// Copyright Adam Smyczek 2008.
+// Copyright Adam Smyczek 2009.
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
@@ -64,15 +64,6 @@ var P4JS = function() {
         return funk.apply(null, 
             args.concat(Array.prototype.slice.apply(arguments)));
       };
-    };
-  };
-
-  // Join arguments useful for many... parsers
-  var joinArgs = function(joinChar, f) {
-    var jc = joinChar || "";
-    return function() {
-      var args = Array.prototype.slice.apply(arguments).join(jc);
-      return (f === undefined)? args : f(args);
     };
   };
 
@@ -272,7 +263,7 @@ var P4JS = function() {
   // -- CSV parser ----------------------------------------------------------
 
   // Single value parser
-  var _csv_value = _do(_manyTill(_item, _choice(_char(','), _eol, _eof))).doReturn(function (r) { return r.join(""); });
+  var _csv_value = _do(_many(_noneOf(",\n"))).doReturn(function (r) { return r.join(""); });
 
   // Same as for many many1 implementation, we have to 
   // wrap the parser into a function
@@ -286,21 +277,14 @@ var P4JS = function() {
         _do(_char(","), _csv_values).doReturn(function(_,vs) { return vs; }), 
         _return([]));
 
-  // Parse lines
-  var _csv_lines = function(state) {
-    var vp = _do(_csv_values, _csv_next_line).doReturn(consArgs);
-    return parse(vp, state);
-  };
+  // Parse one line
+  var _csv_line = _do(_csv_values, _eol).doReturn(function(r, _) { return r; });
 
-  // Next line or eol
-  var _csv_next_line = _choice(
-        _do(_eol, _csv_lines).doReturn(function(_,ls) { return ls; }), 
-        _return([]));
-
-  // and the csv parser
-  var _csv = _csv_lines;
+  // And the csv parser
+  var _csv = _do(_many(_csv_line), _eof).doReturn(function(r,_) { return r; });
 
   // -- Parser executor functions -------------------------------------------
+
   var parse = function (parser, state) {
     return parser(state);
   };
@@ -315,11 +299,11 @@ var P4JS = function() {
   p._do         = _do;
 
   p._item       = _item;
-  p._digit      = _sat(isDigit, "Not a Digit!");
-  p._alpha      = _sat(isAlpha, "Not an Alpha!");
-  p._alphanum   = _sat(isAlphaNum, "Not an AlphaNum!");
-  p._lower      = _sat(isLower, "Not a lower case!");
-  p._upper      = _sat(isUpper, "Not a upper case!");
+  p._digit      = _sat(isDigit,     "Not a Digit!");
+  p._alpha      = _sat(isAlpha,     "Not an Alpha!");
+  p._alphanum   = _sat(isAlphaNum,  "Not an AlphaNum!");
+  p._lower      = _sat(isLower,     "Not a lower case!");
+  p._upper      = _sat(isUpper,     "Not a upper case!");
 
   p._choice     = _choice;
   p._char       = _char
