@@ -260,7 +260,7 @@ var P4JS = function() {
     throw mkError("Not EOF!", state);
   }
 
-  // -- CSV parser ----------------------------------------------------------
+  // -- CSV parser based on 'Real World Haskell' example --------------------
 
   // Single value parser
   var _csv_value = _do(_many(_noneOf(",\n"))).doReturn(function (r) { return r.join(""); });
@@ -300,10 +300,10 @@ var P4JS = function() {
 
   p._item       = _item;
   p._digit      = _sat(isDigit,     "Not a Digit!");
-  p._alpha      = _sat(isAlpha,     "Not an Alpha!");
-  p._alphanum   = _sat(isAlphaNum,  "Not an AlphaNum!");
-  p._lower      = _sat(isLower,     "Not a lower case!");
-  p._upper      = _sat(isUpper,     "Not a upper case!");
+  p._alpha      = _sat(isAlpha,     "Not an Alpha char!");
+  p._alphanum   = _sat(isAlphaNum,  "Not an AlphaNum char!");
+  p._lower      = _sat(isLower,     "Not a lower case char!");
+  p._upper      = _sat(isUpper,     "Not a upper case char!");
 
   p._choice     = _choice;
   p._char       = _char
