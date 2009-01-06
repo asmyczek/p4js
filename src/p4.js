@@ -170,8 +170,8 @@ var P4JS = function() {
   };
 
   // Parses next item if it satisfies f, otherwise fails.
-  var _sat = function(f) {
-    return _do(_item).doResult(function(v) { return (f(v))? _return(v) : _failure("Sat failure."); });
+  var _sat = function(f, error_msg) {
+    return _do(_item).doResult(function(v) { return (f(v))? _return(v) : _failure(error_msg); });
   };
 
   // Try the parsers in the order passed and return undefined if no match
@@ -190,8 +190,8 @@ var P4JS = function() {
   };
 
   // Parses next input if it satisfies v, otherwise fails.
-  var _char = function(v) {
-    return _sat(curry(isEqual)(v));
+  var _char = function(c) {
+    return _sat(curry(isEqual)(c), "Not a '" + c + "'!");
   };
 
   // Same as _char but for a string
@@ -232,10 +232,20 @@ var P4JS = function() {
     return _mt;
   };
 
+  // A char in match
+  var _oneOf = function(match) {
+    return _sat(function(c) { return match.indexOf(c) != -1; }, "Not OneOf '" + match + "'!");
+  };
+
+  // Not a char in match
+  var _noneOf = function(match) {
+    return _sat(function(c) { return match.indexOf(c) == -1; }, "Not NoneOf '" + match + "'!");
+  };
+
   // -- Tokenizer -----------------------------------------------------------
 
   // Truncates leading spaces from a input
-  var _space = _do(_many(_sat(isSpace))).doReturn(function(a) { return ""; });
+  var _space = _do(_many(_sat(isSpace))).doReturn(function(a) { return ""; }, "Not a Space!");
 
   // Ignore spacing around to parsed input
   var _token = function(p) {
@@ -243,7 +253,7 @@ var P4JS = function() {
   };
 
   // Parse next char sequence
-  var _seq = _token(_many(_sat(isAlphaNum)));
+  var _seq = _token(_many(_sat(isAlphaNum, "Not an AlphaNum!")));
 
   // Parse next symbol str
   var _symbol = function(str) {
@@ -305,11 +315,11 @@ var P4JS = function() {
   p._do         = _do;
 
   p._item       = _item;
-  p._digit      = _sat(isDigit);
-  p._alpha      = _sat(isAlpha);
-  p._alphanum   = _sat(isAlphaNum);
-  p._lower      = _sat(isLower);
-  p._upper      = _sat(isUpper);
+  p._digit      = _sat(isDigit, "Not a Digit!");
+  p._alpha      = _sat(isAlpha, "Not an Alpha!");
+  p._alphanum   = _sat(isAlphaNum, "Not an AlphaNum!");
+  p._lower      = _sat(isLower, "Not a lower case!");
+  p._upper      = _sat(isUpper, "Not a upper case!");
 
   p._choice     = _choice;
   p._char       = _char
@@ -324,6 +334,8 @@ var P4JS = function() {
   p._eol        = _eol;
 
   p._manyTill   = _manyTill;
+  p._oneOf      = _oneOf;
+  p._noneOf     = _noneOf;
 
   // Parser executor
   p.parse       = function(parser, input) {

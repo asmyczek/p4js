@@ -9,14 +9,14 @@
 
 			var text = "11,12,13\n21,22,23\n31,32,33";
 			
-            var d = p._digit;
+//            var d = p._digit;
 //            var par = p._do(d, d, p._char(","), d, d).doReturn(function(a,b) { return a + b;} );
 			var par = p._csv;
             try {
               var r = p.parse(par, text);
 			  document.writeln(r);
 			} catch(e) {
-				document.writeln(e.line);
+				document.writeln(e.message);
 			}
 		</script>
 	</body>
