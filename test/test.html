@@ -68,12 +68,12 @@
 		assert(p._choice(p._char('a'), p._char('b')), "abc", "a", "_choice(1)");
 		assert(p._choice(p._char('a'), p._char('b')), "bc", "b", "_choice(2)");
 
-        assert(p._do(p._many(p._digit)).doReturn(function(r) { return r.join(""); }), "123", "123", "_many");
-        assert(p._do(p._many(p._digit)).doReturn(function(r) { return r.join(""); }), "", "", "_many(empty)");
-        assert(p._do(p._many1(p._digit)).doReturn(function(r) { return r.join(""); }), "123", "123", "_many1");
-        assertException(p._do(p._many1(p._digit)).doReturn(function(r) { return r.join(""); }), "", "_many1(empty)");
+        assert(p._do(p._many(p._digit)).doReturn(p.joinArray()), "123", "123", "_many");
+        assert(p._do(p._many(p._digit)).doReturn(p.joinArray()), "", "", "_many(empty)");
+        assert(p._do(p._many1(p._digit)).doReturn(p.joinArray()), "123", "123", "_many1");
+        assertException(p._do(p._many1(p._digit)).doReturn(p.joinArray()), "", "_many1(empty)");
 
-		assert(p._do(p._manyTill(p._item, p._char(","))).doReturn(function(r) { return r.join(""); }), "abc,", "abc", "_manyTill");
+		assert(p._do(p._manyTill(p._item, p._char(","))).doReturn(p.joinArray()), "abc,", "abc", "_manyTill");
 		assert(p._oneOf("abc"), "abc,", "a", "_oneOf");
 		assertException(p._oneOf("abc"), "1abc,", "_oneOf(negative)");
 		assert(p._noneOf("abc"), "123,", "1", "_noneOf");

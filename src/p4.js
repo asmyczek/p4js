@@ -56,6 +56,15 @@ var P4JS = function() {
     return r;
   };
 
+  // Helper for array join results
+  var joinArray = function(joinChar, f) {
+    return function(as) {
+      var c = joinChar || "",
+          r = as.join(c);
+      return (f === undefined)? r : f(r);
+    };
+  };
+
   // Function curring, a must ;)
   var curry = function(funk) {
     return function() {
@@ -65,11 +74,6 @@ var P4JS = function() {
             args.concat(Array.prototype.slice.apply(arguments)));
       };
     };
-  };
-
-  // Cons arguments
-  var consArgs = function(a, as) {
-    return cons(a, as);
   };
 
   // Create Parser
@@ -204,7 +208,7 @@ var P4JS = function() {
   // JavaScript is not lazy, so the inner parser function is required
   var _many1 = function(p) {
     return function(state) {
-      var mp = _do(p, _many(p)).doReturn(consArgs);
+      var mp = _do(p, _many(p)).doReturn(cons);
       return parse(mp, state);
     };
   };
@@ -217,7 +221,7 @@ var P4JS = function() {
         parse(b, state);
         return parse(_return([]), state);
       } catch (e) {
-        return parse(_do(p, _mt).doReturn(consArgs), state);
+        return parse(_do(p, _mt).doReturn(cons), state);
       }
     };
     return _mt;
@@ -244,7 +248,7 @@ var P4JS = function() {
   };
 
   // Parse next char sequence
-  var _seq = _do(_token(_many(_sat(isAlphaNum, "Not an AlphaNum!")))).doReturn(function(r) { return r.join(""); });
+  var _seq = _do(_token(_many(_sat(isAlphaNum, "Not an AlphaNum!")))).doReturn(joinArray());
 
   // Parse next symbol str
   var _symbol = function(str) {
@@ -263,12 +267,12 @@ var P4JS = function() {
   // -- CSV parser based on 'Real World Haskell' example --------------------
 
   // Single value parser
-  var _csv_value = _do(_many(_noneOf(",\n"))).doReturn(function (r) { return r.join(""); });
+  var _csv_value = _do(_many(_noneOf(",\n"))).doReturn(joinArray());
 
   // Same as for many many1 implementation, we have to 
   // wrap the parser into a function
   var _csv_values = function(state) {
-    var vp = _do(_csv_value, _csv_next_value).doReturn(consArgs);
+    var vp = _do(_csv_value, _csv_next_value).doReturn(cons);
     return parse(vp, state);
   };
 
@@ -328,6 +332,9 @@ var P4JS = function() {
 
   // Concrete parsers
   p._csv        = _csv;
+
+  // Helpers
+  p.joinArray   = joinArray;
 
   return p;
 
