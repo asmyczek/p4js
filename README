@@ -26,11 +26,11 @@ Simple Introduction
 
  - Create a simple parser, for example
 
-     var onechar = p._item;
+     var one_char = p._item;
 
    and run it on an input as following:
 
-     var result = p.parse(onechar, "my input");
+     var result = p.parse(one_char, "my input");
      document.writeln(result);
 
    '_item' reads one char from the input, therefore the result is the first letter 'm'.
@@ -46,7 +46,7 @@ Simple Introduction
    
    A parser can be executed in sequence using the _many, _many1 and _manyTill combinators.
    _many(_digit) for example reads as many digits from the input as available:
-    - parse(_many(_digit), "123abc") returns an array [1,2,3],
+    - parse(_many(_digit), "123abc") returns the array [1,2,3],
     - parse(_many(_digit), "abc") returns an empty array [] but
     - parse(_many1(_digit), "abc") expects at least one digit, so it throws an exception.
    _manyTill takes two parsers as argument. The first parser is executed as many times 
@@ -69,11 +69,11 @@ Simple Introduction
 
    The _choice combinator takes multiple parsers as argument and applies this in the 
    order as passed. It returns with the result of the first parser that matches the input 
-   or throws an exception if all parsers failed. For example the parser
+   or throws an exception if all parsers fail. For example the parser
    _choice(_char('a'), _char('b')) will return 'a' for an input "abc", 'b' for an input "bc" 
    and throw an exception for anything different that 'a' or 'b'.
 
-   For the complete parser combinators list source code, unit tests in test/ directory 
+   For the complete parser combinators list see source code, unit tests in test/ directory 
    and examples.
 
    More combinators to come...
