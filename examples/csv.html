@@ -1,0 +1,63 @@
+<html>
+	<head>
+		<title>CSV parse example</title>
+		<style>
+			table.table { border-collapse: collapse; }
+			table.table tr td { border:1px solid #999999; }
+		</style>
+		<script type="text/javascript" src="../src/p4.js"></script>
+		<script type="text/javascript">
+			function parse_csv(input) {
+				var p     = P4JS,
+					table = document.getElementById('table'),
+				    error = document.getElementById('error');
+
+				// Reset results
+				error.innerHTML = "";
+				table.innerHTML = "";
+				var len = table.childNodes.length;
+				var i;
+				for(i = 0; i < len; i++) {
+					table.removeChild(table.childNodes[i]);
+				}
+
+				// Parse and print results or error
+				try {
+					var result = p.parse(p._csv, input);
+					var rows = result, r;
+					for (r = 0; r < rows.length; r++) {
+						var row = document.createElement('tr')
+					    table.appendChild(row);
+						var cols = result[r], c;
+						for (c = 0; c < cols.length; c++) {
+							var col = document.createElement('td')
+						    col.innerHTML = cols[c];
+							row.appendChild(col);
+						};
+					};
+				} catch(e) {
+					error.innerHTML = p.errorToString(e);
+				}
+			};
+		</script>
+	</head>
+
+	<body>
+		<p>
+			<div>Paste a CVS text:</div>
+			<div>
+				<textarea id="csv" rows="5" cols="40">
+a1,a2,a3
+b1,b2,b3
+c1,c2,c3
+				</textarea>
+			</div>
+			<a href="javascript:;" onclick="parse_csv(document.getElementById('csv').value);">Parse</a>
+		</p>
+
+		<p>
+			<table id="table" class="table"></table>
+			<div id="error" style="color:red;"></div>
+		</p>
+	</body>
+</html>

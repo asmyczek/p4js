@@ -11,7 +11,7 @@
               var r = p.parse(par, text);
 			  document.writeln(r);
 			} catch(e) {
-				document.writeln(e.message);
+				document.writeln(p.errorToString(e));
 			}
 		</script>
 	</body>
