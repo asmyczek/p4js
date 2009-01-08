@@ -85,7 +85,7 @@ var P4JS = function() {
   // Create parse state
   var mkState = function(input, line, column) {
     return { input  : input, 
-             line   : line || 0, 
+             line   : line || 1, 
              column : column  || 0 };
   };
 
@@ -95,6 +95,14 @@ var P4JS = function() {
              line    : state.line,
              column  : state.column,
              input   : state.input };
+  };
+
+  // Pretty print error message
+  var errorToString = function(e) {
+    var msg    = e.message || "Unknown error!",
+        line   = e.line || "?",
+        column = e.column || "?";
+    return "Error: " + msg + " at (" + line + ", " + column + ")";
   };
 
   // -- Monadic operators ---------------------------------------------------
@@ -334,7 +342,8 @@ var P4JS = function() {
   p._csv        = _csv;
 
   // Helpers
-  p.joinArray   = joinArray;
+  p.joinArray       = joinArray;
+  p.errorToString   = errorToString;
 
   return p;
 

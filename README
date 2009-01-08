@@ -1,5 +1,89 @@
 Monadic parser library for JavaScript,
 inspired by Graham Hutton's "Programming in Haskell - Functional Parsers".
 
-Status: Proof of concept
+Simple Introduction
+-------------------
+
+1. Setup
+ - Create a test page with the following content:
+
+   <html>
+     <head>
+       <script type="text/javascript" src="p4.js"></script>
+     </head>
+     <body>
+       <script type="text/javascript">
+         // Initialize P4JS
+         var p = P4JS;
+ 
+         // All tests go here
+
+       </script>
+     </body>
+   </html>
+
+   Make sure header script references the p4.js library correctly.
+
+ - Create a simple parser, for example
+
+     var onechar = p._item;
+
+   and run it on an input as following:
+
+     var result = p.parse(onechar, "my input");
+     document.writeln(result);
+
+   '_item' reads one char from the input, therefore the result is the first letter 'm'.
+   This examples can be found in the examples/simple.html' file of the project director.
+
+2. Basic parsing
+
+   The library provides a basic set of parsers to start with. The single char parsers 
+   like _digit, _alpha, _lower etc. read one char from the input, evaluate it and return 
+   the char if it matches the parser, otherwise the parse function throws an exception.
+   For example parse(_digit, "123") returns '1', but parse(_digit, "abc") throws an 
+   exception. Exception handling is described in the following sections.
+   
+   A parser can be executed in sequence using the _many, _many1 and _manyTill combinators.
+   _many(_digit) for example reads as many digits from the input as available:
+    - parse(_many(_digit), "123abc") returns an array [1,2,3],
+    - parse(_many(_digit), "abc") returns an empty array [] but
+    - parse(_many1(_digit), "abc") expects at least one digit, so it throws an exception.
+   _manyTill takes two parsers as argument. The first parser is executed as many times 
+   as the second parser does not match the input. For example 
+   parse(_manyTill(_digit, _char(",")), "123,456") will parse 1,2,3 until ',' is parsed
+   by _char(","). The result is therefore [1,2,3]. An exception is thrown if the first
+   parser fails.
+
+   Complex parsers are build by chaining parsers using the _do operator. 
+   _do takes a list of parsers as arguments and provides a return function to 
+   combines the results of the chained parsers. For example the parser
+   var two_chars = _do(_item, _item).doReturn(function(a, b) { return a + b; });
+   reads next two chars from the input and returns the combined string:
+   parse(two_chars, "1234") returns "12".
+   The _do operator can be used to transform parsed input into a different type or to join
+   results from a _many sequence parser. A integer parser may look as following:
+   _do(_many1(_digit)).doReturn(function(r) { return parseInt(r.join("")); });
+   or using the library helper function joinArray:
+   _do(_many1(_digit)).doReturn(joinArray("", parseInt));
+
+   The _choice combinator takes multiple parsers as argument and applies this in the 
+   order as passed. It returns with the result of the first parser that matches the input 
+   or throws an exception if all parsers failed. For example the parser
+   _choice(_char('a'), _char('b')) will return 'a' for an input "abc", 'b' for an input "bc" 
+   and throw an exception for anything different that 'a' or 'b'.
+
+   For the complete parser combinators list source code, unit tests in test/ directory 
+   and examples.
+
+   More combinators to come...
+
+3. Error handling
+
+   If a parser fails to process the input, an exception is thrown. The exception object
+   contains:
+    - message     : the error message,
+    - line/column : the error position and
+    - input       : the rest of the input not yet processed by the parser.
+   To pretty print the error message use the library function errorToString.
 
