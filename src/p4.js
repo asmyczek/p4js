@@ -272,29 +272,6 @@ var P4JS = function() {
     throw mkError("Not EOF!", state);
   }
 
-  // -- CSV parser based on 'Real World Haskell' example --------------------
-
-  // Single value parser
-  var _csv_value = _do(_many(_noneOf(",\n"))).doReturn(joinArray());
-
-  // Same as for many many1 implementation, we have to 
-  // wrap the parser into a function
-  var _csv_values = function(state) {
-    var vp = _do(_csv_value, _csv_next_value).doReturn(cons);
-    return parse(vp, state);
-  };
-
-  // Parse next value
-  var _csv_next_value = _choice(
-        _do(_char(","), _csv_values).doReturn(function(_,vs) { return vs; }), 
-        _return([]));
-
-  // Parse one line
-  var _csv_line = _do(_csv_values, _eol).doReturn(function(r, _) { return r; });
-
-  // And the csv parser
-  var _csv = _do(_many(_csv_line), _eof).doReturn(function(r,_) { return r; });
-
   // -- Parser executor functions -------------------------------------------
 
   var parse = function (parser, state) {
@@ -328,6 +305,7 @@ var P4JS = function() {
   p._seq        = _seq;
   p._symbol     = _symbol;
   p._eol        = _eol;
+  p._eof        = _eof;
 
   p._manyTill   = _manyTill;
   p._oneOf      = _oneOf;
@@ -338,10 +316,8 @@ var P4JS = function() {
                     return parse(parser, mkState(input)).value;
                   };
 
-  // Concrete parsers
-  p._csv        = _csv;
-
   // Helpers
+  p.cons            = cons;
   p.joinArray       = joinArray;
   p.errorToString   = errorToString;
 

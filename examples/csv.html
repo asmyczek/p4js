@@ -6,9 +6,10 @@
 			table.table tr td { border:1px solid #999999; }
 		</style>
 		<script type="text/javascript" src="../src/p4.js"></script>
+		<script type="text/javascript" src="../src/csv.js"></script>
 		<script type="text/javascript">
 			function parse_csv(input) {
-				var p     = P4JS,
+				var csv   = CSV,
 					table = document.getElementById('table'),
 				    error = document.getElementById('error');
 
@@ -23,7 +24,7 @@
 
 				// Parse and print results or error
 				try {
-					var result = p.parse(p._csv, input);
+					var result = csv.parse(input);
 					var rows = result, r;
 					for (r = 0; r < rows.length; r++) {
 						var row = document.createElement('tr')
@@ -36,7 +37,7 @@
 						};
 					};
 				} catch(e) {
-					error.innerHTML = p.errorToString(e);
+					error.innerHTML = csv.errorToString(e);
 				}
 			};
 		</script>
@@ -44,13 +45,12 @@
 
 	<body>
 		<p>
-			<div>Paste a CVS text:</div>
+			<div>CVS text:</div>
 			<div>
-				<textarea id="csv" rows="5" cols="40">
+<textarea id="csv" rows="5" cols="40">
 a1,a2,a3
 b1,b2,b3
-c1,c2,c3
-				</textarea>
+c1,c2,c3</textarea>
 			</div>
 			<a href="javascript:;" onclick="parse_csv(document.getElementById('csv').value);">Parse</a>
 		</p>
