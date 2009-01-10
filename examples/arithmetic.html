@@ -15,23 +15,33 @@
 				_symbol   = p._symbol,
 				joinArray = p.joinArray;
 
-			// Parse integer
-			var _int = _do(_token(_many1(_digit))).doReturn(joinArray("", parseInt));
+			// Natural number
+			var _nat = _do(_token(_many1(_digit))).doReturn(joinArray("", parseInt));
+
+			// Number parser
+			var _num = _do(_nat).doResult(
+				function(i) {
+					return _choice(
+						_do(_symbol("."), _token(_many1(_digit))).doReturn(function(_, f) { 
+							return i + parseInt(f.join(""))/Math.pow(10, f.length); }),
+						_return(i));
+				});
 
 			// <Factor> ::= <Num> | ( <Exp> ) | - <Factor>
 			var _factor = function(s) {
 				return _choice(
 					_do(_symbol("("), _exp, _symbol(")")).doReturn(function(_, f, __) { return f; }),
 					_do(_symbol("-"), _factor).doReturn(function(_, f) { return 0.0 - f; }),
-					_int)(s);
+					_num)(s);
 			};
 
 			// <Term> ::=  <Factor> * <Term> | <Factor> / <Term> | <Factor>
 			var _term = _do(_factor).doResult(
 				function(f) {
 					return _choice(
-						_do(_symbol("*"), _exp).doReturn(function(_, e) { return f * e; } ),
-						_do(_symbol("/"), _exp).doReturn(function(_, e) { return f / e; } ),
+						_do(_symbol("*"), _term).doReturn(function(_, t) { return f * t; } ),
+						_do(_symbol("/"), _term).doReturn(function(_, t) { return f / t; } ),
+						_do(_symbol("^"), _term).doReturn(function(_, t) { return Math.pow(f, t); } ),
 						_return(f));
 				});
 
@@ -68,7 +78,7 @@
 
 		<p>
 			<span>Expression:</span>
-			<input type="text" id="expression" value="12 - (3 * 2)"></input>
+			<input type="text" id="expression" value="4.2 * (1.5 + 2)^2 - 10.45"></input>
 			<a href="javascript:;" onclick="parse(document.getElementById('expression').value);">Parse</a>
 		</p>
 
