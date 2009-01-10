@@ -86,7 +86,7 @@ var P4JS = function() {
   var mkState = function(input, line, column) {
     return { input  : input, 
              line   : line || 1, 
-             column : column  || 0 };
+             column : column || 0 };
   };
 
   // Create error object
@@ -99,7 +99,7 @@ var P4JS = function() {
 
   // Pretty print error message
   var errorToString = function(e) {
-    var msg    = e.message || "Unknown error!",
+    var msg    = e.message || e,
         line   = e.line || "?",
         column = e.column || "?";
     return "Error: " + msg + " at (" + line + ", " + column + ")";
@@ -120,8 +120,8 @@ var P4JS = function() {
   // bind
   var _bind = function(p, f) {
     return function(state) {
-      var v = parse(p, state);
-      return parse(f(v.value), v.state);
+      var v = p(state);
+      return f(v.value)(v.state);
     };
   };
 
@@ -162,7 +162,7 @@ var P4JS = function() {
   // Consume one char from input.
   var _item = function (state) {
     if (state === undefined || state.input === "") {
-      throw mkError("Invalid input: " + state, state);
+      throw mkError("Invalid input: " + state.input, state);
     } else {
       var v  = state.input[0],
           vs = state.input.slice(1),
@@ -183,12 +183,12 @@ var P4JS = function() {
     return function(state) {
       if (parsers.length > 0) {
         try {
-          return parse(parsers[0], state);
+          return parsers[0](state);
         } catch(e) {
-          return parse(_choice.apply(null, parsers.slice(1)), state);
+          return _choice.apply(null, parsers.slice(1))(state);
         }
       }
-      throw mkError("No match for _choice!", input);
+      throw mkError("No match for _choice!", state);
     };
   };
 
@@ -216,8 +216,7 @@ var P4JS = function() {
   // JavaScript is not lazy, so the inner parser function is required
   var _many1 = function(p) {
     return function(state) {
-      var mp = _do(p, _many(p)).doReturn(cons);
-      return parse(mp, state);
+      return _do(p, _many(p)).doReturn(cons)(state);
     };
   };
 
@@ -226,10 +225,10 @@ var P4JS = function() {
   var _manyTill = function(p, b) {
     var _mt = function(state) {
       try {
-        parse(b, state);
-        return parse(_return([]), state);
+        b(state);
+        return _return([])(state);
       } catch (e) {
-        return parse(_do(p, _mt).doReturn(cons), state);
+        return _do(p, _mt).doReturn(cons)(state);
       }
     };
     return _mt;
@@ -272,12 +271,6 @@ var P4JS = function() {
     throw mkError("Not EOF!", state);
   }
 
-  // -- Parser executor functions -------------------------------------------
-
-  var parse = function (parser, state) {
-    return parser(state);
-  };
-
   // -- The Parser object exports public functions --------------------------
  
   var p = { };
@@ -313,7 +306,7 @@ var P4JS = function() {
 
   // Parser executor
   p.parse       = function(parser, input) {
-                    return parse(parser, mkState(input)).value;
+                    return parser(mkState(input)).value;
                   };
 
   // Helpers
