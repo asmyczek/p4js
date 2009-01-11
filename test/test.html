@@ -52,31 +52,31 @@
 		<p>
         <div><b>Basic combinators</b></div>
 		<script type="text/javascript">
-		assert(p._return("abc"), "abc", "abc", "_return");
+		assert(p._return("abc"), "", "abc", "_return");
 		assertException(p._failure("Exception"), "abc", "_failure");
 
-		assert(p._item, "abc", "a", "_item");
-		assert(p._digit, "123", "1", "_digit");
-		assert(p._alpha, "abc", "a", "_alpha");
-		assert(p._alphanum, "abc", "a", "_alphanum(alpha)");
-		assert(p._alphanum, "123", "1", "_alphanum(num)");
-		assert(p._lower, "abc", "a", "_lower");
-		assert(p._upper, "ABC", "A", "_upper");
+		assert(p._item, "a", "a", "_item");
+		assert(p._digit, "1", "1", "_digit");
+		assert(p._alpha, "a", "a", "_alpha");
+		assert(p._alphanum, "a", "a", "_alphanum(alpha)");
+		assert(p._alphanum, "1", "1", "_alphanum(num)");
+		assert(p._lower, "a", "a", "_lower");
+		assert(p._upper, "A", "A", "_upper");
 
-		assert(p._char("a"), "abc", "a", "_char");
+		assert(p._char("a"), "a", "a", "_char");
 		assert(p._string("ab1"), "ab1", "ab1", "_string");
-		assert(p._choice(p._char('a'), p._char('b')), "abc", "a", "_choice(1)");
-		assert(p._choice(p._char('a'), p._char('b')), "bc", "b", "_choice(2)");
+		assert(p._choice(p._char('a'), p._char('b')), "a", "a", "_choice(1)");
+		assert(p._choice(p._char('a'), p._char('b')), "b", "b", "_choice(2)");
 
         assert(p._do(p._many(p._digit)).doReturn(p.joinArray()), "123", "123", "_many");
         assert(p._do(p._many(p._digit)).doReturn(p.joinArray()), "", "", "_many(empty)");
         assert(p._do(p._many1(p._digit)).doReturn(p.joinArray()), "123", "123", "_many1");
         assertException(p._do(p._many1(p._digit)).doReturn(p.joinArray()), "", "_many1(empty)");
 
-		assert(p._do(p._manyTill(p._item, p._char(","))).doReturn(p.joinArray()), "abc,", "abc", "_manyTill");
-		assert(p._oneOf("abc"), "abc,", "a", "_oneOf");
+		assert(p._do(p._manyTill(p._item, p._char(",")), p._char(",")).doReturn(p.joinArray()), "abc,", "abc", "_manyTill");
+		assert(p._oneOf("abc"), "a", "a", "_oneOf");
 		assertException(p._oneOf("abc"), "1abc,", "_oneOf(negative)");
-		assert(p._noneOf("abc"), "123,", "1", "_noneOf");
+		assert(p._noneOf("abc"), "1", "1", "_noneOf");
 		assertException(p._noneOf("abc"), "abc,", "_noneOf(negative)");
 
 		</script>
@@ -85,7 +85,7 @@
 		<p>
 		<div><b>Tokenizer</b></div>
 		<script type="text/javascript">
-		assert(p._space, "  ab1", "", "_space");
+		assert(p._space, "  ", "", "_space");
 		assert(p._token(p._string("ab1")), "  ab1   ", "ab1", "_token");
 		assert(p._seq, "  ab1   ", "ab1", "_seq");
 		assert(p._symbol("ab1"), "  ab1   ", "ab1", "_symbol");

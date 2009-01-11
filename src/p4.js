@@ -105,6 +105,11 @@ var P4JS = function() {
     return "Error: " + msg + " at (" + line + ", " + column + ")";
   };
 
+  // Null input check
+  var nullInput = function(input) {
+    return (input === undefined || input === "");
+  };
+
   // -- Monadic operators ---------------------------------------------------
  
   // return
@@ -161,7 +166,7 @@ var P4JS = function() {
 
   // Consume one char from input.
   var _item = function (state) {
-    if (state === undefined || state.input === "") {
+    if (nullInput(state.input)) {
       throw mkError("Invalid input: " + state.input, state);
     } else {
       var v  = state.input[0],
@@ -267,9 +272,20 @@ var P4JS = function() {
 
   // EOF or end of input parser
   var _eof = function(state) {
-    if (state === undefined || state.input === "") return _return("");
+    if (nullInput(state.input)) return _return("");
     throw mkError("Not EOF!", state);
   }
+
+  // -- The Parser function -------------------------------------------------
+
+  // Check if entire input is consumed and throw an exception
+  var parse = function(parser, input) {
+    var result = parser(mkState(input));
+    if (nullInput(result.state.input)) {
+      return result.value;
+    }
+    throw mkError("Unused input: '" + result.state.input + "'", result.state);
+  };
 
   // -- The Parser object exports public functions --------------------------
  
@@ -304,12 +320,8 @@ var P4JS = function() {
   p._oneOf      = _oneOf;
   p._noneOf     = _noneOf;
 
-  // Parser executor
-  p.parse       = function(parser, input) {
-                    return parser(mkState(input)).value;
-                  };
+  p.parse       = parse;
 
-  // Helpers
   p.cons            = cons;
   p.joinArray       = joinArray;
   p.errorToString   = errorToString;
