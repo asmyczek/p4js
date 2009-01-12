@@ -86,7 +86,7 @@ var P4JS = function() {
   var mkState = function(input, line, column) {
     return { input  : input, 
              line   : line || 1, 
-             column : column || 0 };
+             column : column || 1 };
   };
 
   // Create error object
@@ -272,7 +272,7 @@ var P4JS = function() {
 
   // EOF or end of input parser
   var _eof = function(state) {
-    if (nullInput(state.input)) return _return("");
+    if (nullInput(state.input)) return _return("")(state);
     throw mkError("Not EOF!", state);
   }
 

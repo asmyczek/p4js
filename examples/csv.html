@@ -6,11 +6,46 @@
 			table.table tr td { border:1px solid #999999; }
 		</style>
 		<script type="text/javascript" src="../src/p4.js"></script>
-		<script type="text/javascript" src="../src/csv.js"></script>
 		<script type="text/javascript">
+      		var p = P4JS;
+
+            // Parsers used for csv
+            var _do       = p._do,
+                _return   = p._return,
+                _many     = p._many,
+                _noneOf   = p._noneOf,
+                _choice   = p._choice,
+                _char     = p._char,
+                _eol      = p._eol,
+                cons      = p.cons,
+                joinArray = p.joinArray;
+
+            // Trim string helper
+            var trim = function(str) {
+              return str.replace(/^\s+|\s+$/g, '');
+            };
+
+            // Parse one cs-value
+            var _value = _do(_many(_noneOf(",\n"))).doReturn(joinArray("", trim));
+
+            // Parse values: first plus next values
+            var _values = function(state) {
+              return _do(_value, _next_values).doReturn(cons)(state);
+            };
+
+            // Parse next values
+            var _next_values = _choice(
+                  _do(_char(","), _values).doReturn(function(_,vs) { return vs; }), 
+                  _return([]));
+
+            // Parse one line
+            var _line = _do(_values, _eol).doReturn(function(vs, _) { return vs; });
+           
+            // And the csv parser
+            var _csv = _many(_line);
+
 			function parse_csv(input) {
-				var csv   = CSV,
-					table = document.getElementById('table'),
+				var table = document.getElementById('table'),
 				    error = document.getElementById('error');
 
 				// Reset results
@@ -24,7 +59,7 @@
 
 				// Parse and print results or error
 				try {
-					var result = csv.parse(input);
+					var result = p.parse(_csv, input);
 					var rows = result, r;
 					for (r = 0; r < rows.length; r++) {
 						var row = document.createElement('tr')
@@ -37,7 +72,7 @@
 						};
 					};
 				} catch(e) {
-					error.innerHTML = csv.errorToString(e);
+					error.innerHTML = p.errorToString(e);
 				}
 			};
 		</script>
@@ -52,7 +87,8 @@
 <textarea id="csv" rows="5" cols="40">
 a1,a2,a3
 b1,b2,b3
-c1,c2,c3</textarea>
+c1,c2,c3
+</textarea>
 			</div>
 			<a href="javascript:;" onclick="parse_csv(document.getElementById('csv').value);">Parse</a>
 		</p>
