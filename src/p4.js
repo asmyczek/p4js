@@ -83,10 +83,11 @@ var P4JS = function() {
   };
 
   // Create parse state
-  var mkState = function(input, line, column) {
-    return { input  : input, 
-             line   : line || 1, 
-             column : column || 1 };
+  var mkState = function(input, data, line, column) {
+    return { input  : input,          // current input
+             data   : data,           // optional user data
+             line   : line || 1,      // current parsed line
+             column : column || 1 };  // current parsed column
   };
 
   // Create error object
@@ -171,8 +172,8 @@ var P4JS = function() {
     } else {
       var v  = state.input[0],
           vs = state.input.slice(1),
-          st = (isEqual(v, "\n"))? mkState(vs, state.line + 1, 0) :
-                                   mkState(vs, state.line, state.column + 1);
+          st = (isEqual(v, "\n"))? mkState(vs, state.data, state.line + 1, 0) :
+                                   mkState(vs, state.data, state.line, state.column + 1);
         return mkParser(v, st);
     }
   };
@@ -279,8 +280,8 @@ var P4JS = function() {
   // -- The Parser function -------------------------------------------------
 
   // Check if entire input is consumed and throw an exception
-  var parse = function(parser, input) {
-    var result = parser(mkState(input));
+  var parse = function(parser, input, data) {
+    var result = parser(mkState(input, data));
     if (nullInput(result.state.input)) {
       return result.value;
     }
