@@ -30,8 +30,12 @@ Simple Introduction
 
    and run it on an input as following:
 
-     var result = p.parse(one_char, "my input");
-     document.writeln(result);
+     try {
+       var result = p.parse(one_char, "m");
+       document.writeln(result);
+     } catch(e) {
+       document.writeln(p.errorToString(e));
+     }
 
    '_item' reads one char from the input, therefore the result is the first letter 'm'.
    This examples can be found in the examples/simple.html' file of the project director.

@@ -1,0 +1,54 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+	<head>
+		<title>Tiny Math Processor demo</title>
+		<style>
+			table.table { border-collapse: collapse; }
+			table.table tr td { border:1px solid #999999; }
+		</style>
+		<script type="text/javascript" src="../src/p4.js"></script>
+		<script type="text/javascript" src="../src/tinyMP.js"></script>
+		<script type="text/javascript">
+       var tmp = TinyMP;
+
+			// Executor
+			function execute(input) {
+				var output  = document.getElementById('output'),
+				    error   = document.getElementById('error');
+
+				// Reset results
+				output.innerHTML = "";
+				error.innerHTML  = "";
+
+				var vars = [];
+				vars['x'] = 2;
+
+				// Parse and print results or error
+				try {
+					var exp = tmp.parse(input);
+					output.innerHTML = tmp.eval(exp, vars);
+				} catch(e) {
+					error.innerHTML = tmp.errorToString(e);
+				}
+			};
+		</script>
+	</head>
+
+	<body>
+        <h3>Tiny math processor demo</h3>
+
+		<p>
+			<div>
+<textarea id="input" rows="5" cols="40">
+</textarea>
+			</div>
+			<a href="javascript:;" onclick="execute(document.getElementById('input').value);">Execute</a>
+		</p>
+
+		<p>
+			<div id="output"></div>
+			<div id="error" style="color:red;"></div>
+		</p>
+	</body>
+</html>
+

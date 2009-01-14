@@ -1,3 +1,4 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 	<head>
 		<title>P4JS - Unit tests</title>
@@ -12,7 +13,7 @@
 
           // Ok output
           var ok = function(desc) {
-            document.writeln(desc + " - <span class='ok'>OK</span></br>");
+            document.writeln(desc + " - <span class='ok'>OK</span><br/>");
           };
 
           // Error output
@@ -68,10 +69,10 @@
 		assert(p._choice(p._char('a'), p._char('b')), "a", "a", "_choice(1)");
 		assert(p._choice(p._char('a'), p._char('b')), "b", "b", "_choice(2)");
 
-        assert(p._do(p._many(p._digit)).doReturn(p.joinArray()), "123", "123", "_many");
-        assert(p._do(p._many(p._digit)).doReturn(p.joinArray()), "", "", "_many(empty)");
-        assert(p._do(p._many1(p._digit)).doReturn(p.joinArray()), "123", "123", "_many1");
-        assertException(p._do(p._many1(p._digit)).doReturn(p.joinArray()), "", "_many1(empty)");
+		assert(p._do(p._many(p._digit)).doReturn(p.joinArray()), "123", "123", "_many");
+		assert(p._do(p._many(p._digit)).doReturn(p.joinArray()), "", "", "_many(empty)");
+		assert(p._do(p._many1(p._digit)).doReturn(p.joinArray()), "123", "123", "_many1");
+		assertException(p._do(p._many1(p._digit)).doReturn(p.joinArray()), "", "_many1(empty)");
 
 		assert(p._do(p._manyTill(p._item, p._char(",")), p._char(",")).doReturn(p.joinArray()), "abc,", "abc", "_manyTill");
 		assert(p._oneOf("abc"), "a", "a", "_oneOf");
@@ -90,6 +91,8 @@
 		assert(p._seq, "  ab1   ", "ab1", "_seq");
 		assert(p._symbol("ab1"), "  ab1   ", "ab1", "_symbol");
 		assert(p._eol, "\n", "\n", "_eol");
+		assert(p._eof, "", "", "_eof (empty input)");
+		assert(p._eof, undefined, "", "_eof (undefined input)");
 		</script>
 		</p>
 

@@ -1,3 +1,4 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 	<head>
 		<script type="text/javascript" src="../src/p4.js"></script>
@@ -9,8 +10,12 @@
 
 			// All tests go here
 			var one_char = p._item;
-			var result = p.parse(one_char, "my input");
-			document.writeln(result);
+			try {
+				var result = p.parse(one_char, "m");
+				document.writeln(result);
+			} catch(e) {
+				document.writeln(p.errorToString(e));
+			}
 		</script>
 	</body>
 </html>

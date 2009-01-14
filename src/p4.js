@@ -76,12 +76,6 @@ var P4JS = function() {
     };
   };
 
-  // Create Parser
-  var mkParser = function(value, state) {
-    return { value : value,
-             state : state };
-  };
-
   // Create parse state
   var mkState = function(input, data, line, column) {
     return { input  : input,          // current input
@@ -115,7 +109,7 @@ var P4JS = function() {
  
   // return
   var _return = function(value) {
-    return function (state) { return mkParser(value, state); };
+    return function (state) { return { value : value, state : state }; };
   };
 
   // failure
@@ -174,7 +168,7 @@ var P4JS = function() {
           vs = state.input.slice(1),
           st = (isEqual(v, "\n"))? mkState(vs, state.data, state.line + 1, 0) :
                                    mkState(vs, state.data, state.line, state.column + 1);
-        return mkParser(v, st);
+        return _return(v)(st);
     }
   };
 
@@ -305,8 +299,8 @@ var P4JS = function() {
   p._upper      = _sat(isUpper,     "Not a upper case char!");
 
   p._choice     = _choice;
-  p._char       = _char
-  p._string     = _string
+  p._char       = _char;
+  p._string     = _string;
   p._many       = _many;
   p._many1      = _many1;
 
