@@ -9,24 +9,19 @@
 		<script type="text/javascript" src="../src/p4.js"></script>
 		<script type="text/javascript" src="../src/tinyMP.js"></script>
 		<script type="text/javascript">
-       var tmp = TinyMP;
-
 			// Executor
 			function execute(input) {
-				var output  = document.getElementById('output'),
-				    error   = document.getElementById('error');
+      var output  = document.getElementById("output"),
+          canvas  = document.getElementById("graph"),
+				  error   = document.getElementById('error'),
+          tmp     = TinyMP(output, canvas);
 
-				// Reset results
-				output.innerHTML = "";
+        // Clean errors
 				error.innerHTML  = "";
-
-				var vars = [];
-				vars['x'] = 2;
 
 				// Parse and print results or error
 				try {
-					var exp = tmp.parse(input);
-					output.innerHTML = tmp.eval(exp, vars);
+					tmp.parse(input);
 				} catch(e) {
 					error.innerHTML = tmp.errorToString(e);
 				}
@@ -40,15 +35,24 @@
 		<p>
 			<div>
 <textarea id="input" rows="5" cols="40">
+eval(2+2)
 </textarea>
 			</div>
 			<a href="javascript:;" onclick="execute(document.getElementById('input').value);">Execute</a>
 		</p>
 
 		<p>
-			<div id="output"></div>
 			<div id="error" style="color:red;"></div>
+      <div><i>eval()</i> and <i>print()</i> output:</div>
+      <ol id="output" style="border:1px solid #888888">
+      </ol>
 		</p>
+
+    <p>
+    <div><i>draw()</i> function graph:</div>
+      <canvas id="graph" style="border:1px solid #888888"></canvas>
+    </p>
+
 	</body>
 </html>
 
