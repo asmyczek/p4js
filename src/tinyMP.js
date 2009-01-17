@@ -35,6 +35,19 @@
 
 var TinyMP = function(p) {
 
+  // Graph color map
+  var color_map = [ "rgb(180, 0  , 0)"
+                  , "rgb(0  , 180, 0)"
+                  , "rgb(0  , 0  , 180)"
+                  , "rgb(180, 180, 0)"
+                  , "rgb(0  , 180, 180)"
+                  , "rgb(180, 0  , 180)"
+                  , "rgb(180, 180, 180)" ];
+
+  // Rage of the graph display
+  // from -(graph_x_range/2) to (graph_x_range/2)
+  var graph_x_range = 12;
+
   // Used parser combinators
   var _do       = p._do,
       _return   = p._return,
@@ -192,6 +205,19 @@ var TinyMP = function(p) {
     return _do(_symbol("print("), _exp, _symbol(")")).doReturn(function(_, f, __) { print_exp(f, s.data.vars, s.data.ul); return _return(); })(s);
   };
 
+  // _eval parser
+  var _do_draw = function(s) { 
+    return _do(_symbol("draw("), 
+               _exp, 
+               _symbol(","), 
+               _token(_lower),
+               _symbol(")")).doReturn(
+             function(_a, f, _b, v, _c) { 
+               draw_exp(f, v, s.data.vars, s.data); 
+               return _return(); 
+             })(s);
+  };
+
   // <Factor> ::= <Num> | ( <Exp> ) | - <Factor>
   var _factor = function(s) {
     return _choice(
@@ -200,7 +226,8 @@ var TinyMP = function(p) {
       _do(_symbol("~"), _exp).doReturn(function(_, f) { return sqrt(f); } ),
       _do_eval,
       _do_print,
-      _do(_lower).doReturn(function(v) { return variable(v); }),
+      _do_draw,
+      _do(_token(_lower)).doReturn(function(v) { return variable(v); }),
       _num
       )(s);
   };
@@ -208,7 +235,7 @@ var TinyMP = function(p) {
   // Parse assigment
   var _do_assig = function(f) {
     return function(s) { 
-      return _do(_symbol("="), _exp).doReturn(function(_, e) { return assig(f, e, s.data.vars) })(s); 
+      return _do(_symbol("="), _exp).doReturn(function(_, e) { return assig(f, e, s.data.vars); })(s); 
     };
   };
 
@@ -217,7 +244,7 @@ var TinyMP = function(p) {
     function(f) {
       return _choice(
         _do(_symbol("^"), _exp).doReturn(function(_, t) { return power(f, t); } ),
-        _do(_symbol("'"), _token(_lower)).doReturn(function(_, v) { return diff(f, v) }),
+        _do(_symbol("'"), _token(_lower)).doReturn(function(_, v) { return diff(f, v); }),
         _do_assig(f),
         _return(f));
     });
@@ -260,6 +287,57 @@ var TinyMP = function(p) {
                     print(exp.print(vars).value, ul);
                   };
 
+  // Draw a function graph
+  var draw_exp  = function(exp, x_var, vars, data) {
+                    if (data.canvas.getContext) {
+                      var ctx        = data.canvas.getContext("2d"),
+                          width      = data.canvas.width,
+                          height     = data.canvas.height,
+                          graphCount = data['graphCount'],
+                          rangeDiff  = graph_x_range / width,
+                          mvars      = [];
+
+                      // Copy vars
+                      var v;
+                      for (v in vars) mvars[v] = vars[v];
+
+                      // Some helpers
+                      px2value = function(px) {
+                        return -(graph_x_range/2) + (px * rangeDiff);
+                      };
+
+                      value2px = function(value) {
+                        return height/2 - (value / rangeDiff);
+                      };
+
+                      // Draw
+                      ctx.strokeStyle = color_map[graphCount % color_map.length];
+                      ctx.lineWidth = 1;
+                      ctx.beginPath();
+
+                      // Draw the rest
+                      var drawing = false;
+                      var px;
+                      for (px = 0; px < width; px++) {
+                        mvars[x_var] = constant(px2value(px));
+                        y = exp.eval(mvars).value;
+                        if ((y !== Infinity) && (y !== Infinity)) {
+                          if (drawing) {
+                            ctx.lineTo(px, value2px(y));
+                          } else {
+                            ctx.moveTo(px, value2px(y));
+                            drawing = true;
+                          }
+                        } else {
+                          drawing = false;
+                        }
+                      }
+                      ctx.stroke();
+
+                      data['graphCount'] = graphCount + 1;
+                    }
+                  };
+
   // Print to output
   var print = function(v, ul) {
                 var li = document.createElement('li');
@@ -270,7 +348,43 @@ var TinyMP = function(p) {
   // Clean output list and canvas
   var clean = function(ul, canvas) {
                 while (ul.firstChild) ul.removeChild(ul.firstChild);
-                // TODO: clean canvas
+                if (canvas.getContext) {
+                  var ctx = canvas.getContext("2d");
+                  ctx.clearRect(0, 0, canvas.width, canvas.height);
+                  // draw coordinates
+                  // draw axis
+                  try {
+                    var center = { x : canvas.width / 2, 
+                                   y : canvas.height / 2 }
+                    // draw axis
+                    ctx.strokeStyle = "rgb(0,0,0)"
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(0, center.y);
+                    ctx.lineTo(canvas.width, center.y);
+                    ctx.moveTo(center.x, 0);
+                    ctx.lineTo(center.x, canvas.height);
+                    ctx.stroke();
+
+                    var vdiff = canvas.width / graph_x_range;
+                    var i;
+                    for (i = 1; i < 7; i++) {
+                      ctx.beginPath();
+                      ctx.moveTo(center.x + i * vdiff, center.y);
+                      ctx.lineTo(center.x + i * vdiff, center.y + (graph_x_range/2));
+                      ctx.moveTo(center.x - i * vdiff, center.y);
+                      ctx.lineTo(center.x - i * vdiff, center.y + (graph_x_range/2));
+                      ctx.moveTo(center.x, center.y + i * vdiff);
+                      ctx.lineTo(center.x + (graph_x_range/2), center.y + i * vdiff);
+                      ctx.moveTo(center.x, center.y - i * vdiff);
+                      ctx.lineTo(center.x + (graph_x_range/2), center.y - i * vdiff);
+                      ctx.stroke();
+                    }
+
+                  } catch(e) {
+                    alert(e);
+                  }
+                }
               };
 
   // -- The processor object ------------------------------------------------
@@ -282,9 +396,10 @@ var TinyMP = function(p) {
     // Parse input into expression
     tmp.parse = function(input) {
                   clean(ul_element, canvas_element);
-                  var data = { vars   : [],
-                               ul     : ul_element,
-                               canvas : canvas_element };
+                  var data = { vars       : [],
+                               ul         : ul_element,
+                               canvas     : canvas_element,
+                               graphCount : 0 };
                   return p.parse(_mathp, input, data);
                 };
 

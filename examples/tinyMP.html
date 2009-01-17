@@ -9,7 +9,7 @@
 		<script type="text/javascript" src="../src/p4.js"></script>
 		<script type="text/javascript" src="../src/tinyMP.js"></script>
 		<script type="text/javascript">
-			// Executor
+
 			function execute(input) {
       var output  = document.getElementById("output"),
           canvas  = document.getElementById("graph"),
@@ -26,32 +26,48 @@
 					error.innerHTML = tmp.errorToString(e);
 				}
 			};
+
 		</script>
 	</head>
 
 	<body>
-        <h3>Tiny math processor demo</h3>
+    <h3>Tiny math processor demo</h3>
 
-		<p>
-			<div>
+    <table>
+      <tr>
+        <td width="50%" valign="top">
+
+          <p>
+            <div>
 <textarea id="input" rows="5" cols="40">
-eval(2+2)
+draw(x^2,x)
 </textarea>
-			</div>
-			<a href="javascript:;" onclick="execute(document.getElementById('input').value);">Execute</a>
-		</p>
+            </div>
+            <a href="javascript:;" onclick="execute(document.getElementById('input').value);">Evaluate</a>
+          </p>
 
-		<p>
-			<div id="error" style="color:red;"></div>
-      <div><i>eval()</i> and <i>print()</i> output:</div>
-      <ol id="output" style="border:1px solid #888888">
-      </ol>
-		</p>
+          <p>
+            <div id="error" style="color:red;"></div>
+            <div><i>eval()</i> and <i>print()</i> output:</div>
+            <ol id="output" style="border:1px solid #888888">
+            </ol>
+          </p>
 
-    <p>
-    <div><i>draw()</i> function graph:</div>
-      <canvas id="graph" style="border:1px solid #888888"></canvas>
-    </p>
+          <p>
+          <div><i>draw()</i> function graph:</div>
+            <canvas id="graph" width="500px" height="400px" style="border:1px solid #888888">Canvas not supported!</canvas>
+          </p>
+
+        </td>
+        <td valign="top">
+
+          <p>
+            Docs
+          </p>
+
+        </td>
+      </tr>
+    </table>
 
 	</body>
 </html>
