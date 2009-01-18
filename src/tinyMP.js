@@ -71,7 +71,7 @@ var TinyMP = function(p) {
   var constant = function(c) { 
     return { 
       eval  : _return(c),
-      diff  : function(s) { return _return(constant(0))(s); }, // Recursion again
+      diff  : function(s, vars) { return _return(constant(0))(s, vars); }, // Recursion again
       print : _return(c)
     };
   };
@@ -94,8 +94,13 @@ var TinyMP = function(p) {
                   throw "Variable '" + x + "' not defined!";
                 }
               },
-      diff  : function(diff_var) {
-                return (diff_var === x)? _return(constant(1))(diff_var) : _return(constant(0));
+      diff  : function(diff_var, vars) {
+                var v = vars[x];
+                if (v !== undefined) {
+                  return _return(diff_exp(v, diff_var, vars))(diff_var, vars);
+                } else {
+                  return (diff_var === x)? _return(constant(1))(diff_var, vars) : _return(constant(0))(diff_var, vars);
+                }
               },
       print : function(vars) {
                 var v = vars[x];
@@ -141,7 +146,7 @@ var TinyMP = function(p) {
   var power = function(a, b) { 
     return { 
       eval  : _do(a.eval, b.eval).doReturn(function(x, y) { return Math.pow(x, y); }),
-      diff  : function(s) { return _return(mult(b, power(a, brackets(minus(constant(1), b)))))(s) },
+      diff  : function(s, vars) { return _return(mult(b, power(a, brackets(minus(constant(1), b)))))(s, vars) },
       print : _do(a.print, b.print).doReturn(function(x, y) { return x + "^" + y; })
     };
   };
@@ -149,7 +154,7 @@ var TinyMP = function(p) {
   var sqrt = function(a) { 
     return { 
       eval  : _do(a.eval).doReturn(function(x) { return Math.sqrt(x); }),
-      diff  : function(s) { return _return(mult(constant(0.5), power(a, brackets(neg(constant(0.5))))))(s); },
+      diff  : function(s, vars) { return _return(mult(constant(0.5), power(a, brackets(neg(constant(0.5))))))(s, vars); },
       print : _do(a.print).doReturn(function(x) { return "~" + x; })
     };
   };
@@ -239,12 +244,19 @@ var TinyMP = function(p) {
     };
   };
 
+  // Parse derivation
+  var _do_diff = function(f) {
+    return function(s) { 
+      return _do(_symbol("'"), _token(_lower)).doReturn(function(_, v) { return diff_exp(f, v, s.data.vars); })(s);
+    };
+  };
+
   // <Expo> ::=  <Factor> * <Expo> | <Factor> / <Expo> | <Factor>'<DiffVar> | <Factor>
   var _expo = _do(_factor).doResult(
     function(f) {
       return _choice(
         _do(_symbol("^"), _exp).doReturn(function(_, t) { return power(f, t); } ),
-        _do(_symbol("'"), _token(_lower)).doReturn(function(_, v) { return diff(f, v); }),
+        _do_diff(f),
         _do_assig(f),
         _return(f));
     });
@@ -273,8 +285,8 @@ var TinyMP = function(p) {
   // -- Processor functions -------------------------------------------------
 
   // Differentiate on diff_var
-  var diff      = function(exp, diff_var) {
-                    return exp.diff(diff_var).value;
+  var diff_exp  = function(exp, diff_var, vars) {
+                    return exp.diff(diff_var, vars).value;
                   };
 
   // Evaluate expression
