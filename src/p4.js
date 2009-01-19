@@ -86,7 +86,8 @@ var P4JS = function() {
 
   // Create error object
   var mkError = function(message, state) {
-    return { message : message,
+    return { type    : "parse_error",
+             message : message,
              line    : state.line,
              column  : state.column,
              input   : state.input };
@@ -95,9 +96,15 @@ var P4JS = function() {
   // Pretty print error message
   var errorToString = function(e) {
     var msg    = e.message || e,
-        line   = e.line || "?",
-        column = e.column || "?";
-    return "Error: " + msg + " at (" + line + ", " + column + ")";
+        line   = e.line,
+        column = e.column;
+    if (e.type) {
+      msg = ((e.type === "parse_error")? "Parser error" : e.type) + ": " + msg;
+    }
+    if (line !== undefined && column != undefined) {
+      msg += " at (" + (line || "?") + ", " + (column || "?") + ")";
+    }
+    return msg;
   };
 
   // Null input check
@@ -162,7 +169,7 @@ var P4JS = function() {
   // Consume one char from input.
   var _item = function (state) {
     if (nullInput(state.input)) {
-      throw mkError("Invalid input: " + state.input, state);
+      throw mkError("Empty or undefined input!", state);
     } else {
       var v  = state.input[0],
           vs = state.input.slice(1),
@@ -185,7 +192,12 @@ var P4JS = function() {
         try {
           return parsers[0](state);
         } catch(e) {
-          return _choice.apply(null, parsers.slice(1))(state);
+          // Catch parser exceptions only
+          if (e.type && e.type === "parse_error") {
+            return _choice.apply(null, parsers.slice(1))(state);
+          } else {
+            throw e;
+          }
         }
       }
       throw mkError("No match for _choice!", state);

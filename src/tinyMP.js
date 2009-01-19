@@ -91,7 +91,7 @@ var TinyMP = function(p) {
                 if (v !== undefined) {
                   return _return(v.eval(vars).value)(vars);
                 } else {
-                  throw "Variable '" + x + "' not defined!";
+                  throw { type: "Evaluation error", message : "Variable '" + x + "' not defined!" };
                 }
               },
       diff  : function(diff_var, vars) {
@@ -172,11 +172,15 @@ var TinyMP = function(p) {
     if (v.length === 1) {
       vars[v] = b;
     } else {
-      throw "Left side of an assigment is not a variable!";
+      throw { type: "Evaluation error", message : "Left side of an assigment is not a variable!" };
     }
     return {
-      eval  : function() { throw "Cannot evaluate an assignment!"; },
-      diff  : function() { throw "Cannot diff on an assignment!"; },
+      eval  : function() { 
+                throw { type: "Evaluation error", message : "Cannot evaluate an assignment!" };
+              },
+      diff  : function() { 
+                throw { type: "Evaluation error", message : "Cannot diff on an assignment!" };
+              },
       print : _do(a.print, b.print).doReturn(function(x, y) { return x + "=" + y; })
     };
   };
@@ -365,36 +369,31 @@ var TinyMP = function(p) {
                   ctx.clearRect(0, 0, canvas.width, canvas.height);
                   // draw coordinates
                   // draw axis
-                  try {
-                    var center = { x : canvas.width / 2, 
-                                   y : canvas.height / 2 }
-                    // draw axis
-                    ctx.strokeStyle = "rgb(0,0,0)"
-                    ctx.lineWidth = 1;
+                  var center = { x : canvas.width / 2, 
+                                 y : canvas.height / 2 }
+                  // draw axis
+                  ctx.strokeStyle = "rgb(0,0,0)"
+                  ctx.lineWidth = 1;
+                  ctx.beginPath();
+                  ctx.moveTo(0, center.y);
+                  ctx.lineTo(canvas.width, center.y);
+                  ctx.moveTo(center.x, 0);
+                  ctx.lineTo(center.x, canvas.height);
+                  ctx.stroke();
+
+                  var vdiff = canvas.width / graph_x_range;
+                  var i;
+                  for (i = 1; i < 7; i++) {
                     ctx.beginPath();
-                    ctx.moveTo(0, center.y);
-                    ctx.lineTo(canvas.width, center.y);
-                    ctx.moveTo(center.x, 0);
-                    ctx.lineTo(center.x, canvas.height);
+                    ctx.moveTo(center.x + i * vdiff, center.y);
+                    ctx.lineTo(center.x + i * vdiff, center.y + (graph_x_range/2));
+                    ctx.moveTo(center.x - i * vdiff, center.y);
+                    ctx.lineTo(center.x - i * vdiff, center.y + (graph_x_range/2));
+                    ctx.moveTo(center.x, center.y + i * vdiff);
+                    ctx.lineTo(center.x + (graph_x_range/2), center.y + i * vdiff);
+                    ctx.moveTo(center.x, center.y - i * vdiff);
+                    ctx.lineTo(center.x + (graph_x_range/2), center.y - i * vdiff);
                     ctx.stroke();
-
-                    var vdiff = canvas.width / graph_x_range;
-                    var i;
-                    for (i = 1; i < 7; i++) {
-                      ctx.beginPath();
-                      ctx.moveTo(center.x + i * vdiff, center.y);
-                      ctx.lineTo(center.x + i * vdiff, center.y + (graph_x_range/2));
-                      ctx.moveTo(center.x - i * vdiff, center.y);
-                      ctx.lineTo(center.x - i * vdiff, center.y + (graph_x_range/2));
-                      ctx.moveTo(center.x, center.y + i * vdiff);
-                      ctx.lineTo(center.x + (graph_x_range/2), center.y + i * vdiff);
-                      ctx.moveTo(center.x, center.y - i * vdiff);
-                      ctx.lineTo(center.x + (graph_x_range/2), center.y - i * vdiff);
-                      ctx.stroke();
-                    }
-
-                  } catch(e) {
-                    alert(e);
                   }
                 }
               };
