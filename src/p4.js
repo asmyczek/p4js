@@ -1,339 +1,188 @@
-// --------------------------------------------------------------------------
-// Monadic parser library for JavaScript
-// inspired by Graham Hutton's "Programming in Haskell - Functional Parsers"
-// See README for details.
-//
-//
-// Copyright Adam Smyczek 2009.
-// All rights reserved.
-// 
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
-// 
-//     * Redistributions of source code must retain the above copyright
-//       notice, this list of conditions and the following disclaimer.
-// 
-//     * Redistributions in binary form must reproduce the above
-//       copyright notice, this list of conditions and the following
-//       disclaimer in the documentation and/or other materials provided
-//       with the distribution.
-// 
-//     * Neither the name the author nor the names of other
-//       contributors may be used to endorse or promote products derived
-//       from this software without specific prior written permission.
-// 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-// "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-// LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-// A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-// OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-// SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-// LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-// THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// --------------------------------------------------------------------------
+var $P = function() {
 
-var P4JS = function() {
+	var _parser_stack = [],
+      _value_stack,
+      _state; 
 
-  // -- Some utility function -----------------------------------------------
- 
-  var isDigit    = function(c) { return ((c >= "0") && (c <= "9")); };
-  var isLower    = function(c) { return ((c >= "a") && (c <= "z")); };
-  var isUpper    = function(c) { return ((c >= "A") && (c <= "Z")); };
-  var isAlpha    = function(c) { return isLower(c) || isUpper(c); };
-  var isAlphaNum = function(c) { return isAlpha(c) || isDigit(c); };
-  var isSpace    = function(c) { return ((c === ' ') || (c === '\t')); };
-  var isEqual    = function(a, b) { return a === b };
+	var pushValue = function(v) {
+		_value_stack[_value_stack.length - 1].push(v);
+	};
 
-  // Custom cons, adds a to the as array
-  var cons = function(a, as) {
-    var r = as.slice();
-    r.unshift("");
-    r[0] = a;
-    return r;
-  };
+	var addValueStack = function() {
+		_value_stack.push([]);
+	};
 
-  // Helper for array join results
-  var joinArray = function(joinChar, f) {
-    return function(as) {
-      var c = joinChar || "",
-          r = as.join(c);
-      return (f === undefined)? r : f(r);
-    };
-  };
+	var reduceValueStack = function(f) {
+		pushValue(f(_value_stack.pop()));
+	};
 
-  // Function curring, a must ;)
-  var curry = function(funk) {
-    return function() {
-      var args = Array.prototype.slice.apply(arguments);
-      return function () {
-        return funk.apply(null, 
-            args.concat(Array.prototype.slice.apply(arguments)));
-      };
-    };
-  };
+	var pushParser = function(f) {
+		_parser_stack.push(f);
+		return p;
+	};
 
-  // Create parse state
-  var mkState = function(input, data, line, column) {
-    return { input  : input,          // current input
-             data   : data,           // optional user data
-             line   : line || 1,      // current parsed line
-             column : column || 1 };  // current parsed column
-  };
+	var error = function(err) {
+		return { type    : "parse_error"
+           , message : err
+           , line    : _state.line
+           , column  : _state.column
+           , input   : _state.input
+           , print   : function() {
+             return "Parser Error: " + err + " at (line " + _state.line + ", column " + _state.column + ")";
+           }
+          };
+	};
 
-  // Create error object
-  var mkError = function(message, state) {
-    return { type    : "parse_error",
-             message : message,
-             line    : state.line,
-             column  : state.column,
-             input   : state.input };
-  };
+	var curry = function(f) {
+		return function() {
+			var args = Array.prototype.slice.apply(arguments);
+			return function () {
+				return f.apply(null, args.concat(Array.prototype.slice.apply(arguments)));
+			};
+		};
+	};
 
-  // Pretty print error message
-  var errorToString = function(e) {
-    var msg    = e.message || e,
-        line   = e.line,
-        column = e.column;
-    if (e.type) {
-      msg = ((e.type === "parse_error")? "Parser error" : e.type) + ": " + msg;
-    }
-    if (line !== undefined && column != undefined) {
-      msg += " at (" + (line || "?") + ", " + (column || "?") + ")";
-    }
-    return msg;
-  };
+	// Sat functions
+	var isDigit    = function(c)    { return ((c >= "0") && (c <= "9")); };
+	var isLower    = function(c)    { return ((c >= "a") && (c <= "z")); };
+	var isUpper    = function(c)    { return ((c >= "A") && (c <= "Z")); };
+	var isAlpha    = function(c)    { return isLower(c) || isUpper(c); };
+	var isAlphaNum = function(c)    { return isAlpha(c) || isDigit(c); };
+	var isSpace    = function(c)    { return ((c === ' ') || (c === '\t')); };
+	var isEqual    = function(a, b) { return a === b };
 
-  // Null input check
-  var nullInput = function(input) {
-    return (input === undefined || input === "");
-  };
+	// Parser
+	var p = {
 
-  // -- Monadic operators ---------------------------------------------------
- 
-  // return
-  var _return = function(value) {
-    return function (state) { return { value : value, state : state }; };
-  };
+		_return : function(v) {
+			return pushParser(function() { pushValue(v); });
+		},
 
-  // failure
-  var _failure = function(error_msg) {
-    return function (state) { throw mkError(error_msg, state); };
-  };
-
-  // bind
-  var _bind = function(p, f) {
-    return function(state) {
-      var v = p(state);
-      return f(v.value)(v.state);
-    };
-  };
-
-  // Recursive bind used by the _do function.
-  var _rec_bind = function(parsers, retfunk, results) {
-    if (parsers.length > 0) {
-      return _bind(parsers[0], 
-        function(v) { 
-          var r = results.slice();
-          r[results.length] = v;
-          return _rec_bind(parsers.slice(1), retfunk, r);
-        });
-    } else {
-      return retfunk.apply(null, results);
-    }
-  };
-
-  // Do function takes parsers as arguments in the order of execution
-  // and returns an object that provides following functions:
-  // - doReturn(f) : applies the function f to the result array of all parsers
-  //                 and returns the parser.
-  // - doResult(f) : applies the function f to the array result, but do not return
-  //                 the parser. The function f has to return _return(..) or _failure;
-  // - doFail()    : forces the parser to fail, not very common.
-  //
-  var _do = function() {
-    var parsers = Array.prototype.slice.apply(arguments),
-        bind_parser = function(f) { return _rec_bind(parsers, f, []); };
-    return {
-        doReturn : function(f)         { return bind_parser(function() { return _return(f.apply(null, arguments)); }); },
-        doResult : function(f)         { return bind_parser(f); },
-        doFail   : function(error_msg) { return _failure(error_msg); }
-    };
-  };
-
-  // -- Basic parser combinators --------------------------------------------
-
-  // Consume one char from input.
-  var _item = function (state) {
-    if (nullInput(state.input)) {
-      throw mkError("Empty or undefined input!", state);
-    } else {
-      var v  = state.input[0],
-          vs = state.input.slice(1),
-          st = (isEqual(v, "\n"))? mkState(vs, state.data, state.line + 1, 0) :
-                                   mkState(vs, state.data, state.line, state.column + 1);
-        return _return(v)(st);
-    }
-  };
-
-  // Parses next item if it satisfies f, otherwise fails.
-  var _sat = function(f, error_msg) {
-    return _do(_item).doResult(function(v) { return (f(v))? _return(v) : _failure(error_msg); });
-  };
-
-  // Try the parsers in the order passed and return undefined if no match
-  var _choice = function() {
-    var parsers = Array.prototype.slice.apply(arguments);
-    return function(state) {
-      if (parsers.length > 0) {
-        try {
-          return parsers[0](state);
-        } catch(e) {
-          // Catch parser exceptions only
-          if (e.type && e.type === "parse_error") {
-            return _choice.apply(null, parsers.slice(1))(state);
+		_item : function() {
+			return pushParser(function() { 
+        if (!_state.input || _state.input === '') {
+          throw error("Empty input!");
+        } else {
+          var v = _state.input[0];
+          if (isEqual(v, "\n")) {
+            _state.line++;
+            _state.column = 0;
           } else {
-            throw e;
+            _state.column++;
           }
+          pushValue(v); _state.input = _state.input.slice(1); 
         }
-      }
-      throw mkError("No match for _choice!", state);
-    };
-  };
+      });
+		},
 
-  // Parses next input if it satisfies v, otherwise fails.
-  var _char = function(c) {
-    return _sat(curry(isEqual)(c), "Not a '" + c + "'!");
-  };
+		_sat : function(f, error_msg) {
+			return this._do()._item().reduce(function(vs) { if (f(vs[0])) { return vs[0]; } else { throw error(error_msg);} });
+		},
 
-  // Same as _char but for a string
-  var _string = function(str) {
-    if (str.length > 0) {
-        var c  = str.charAt(0),
-            cs = str.substring(1);
-        return _do(_char(c), _string(cs)).doReturn(function(a, b) { return a + b; });
-    };
-    return _return("");
-  };
+		_digit 		: function () { return this._sat(isDigit, 	 'not a digit!'); },
+		_lower 		: function () { return this._sat(isLower, 	 'not a lower char!'); },
+		_upper 		: function () { return this._sat(isUpper, 	 'not an upper char!'); },
+		_alpha 		: function () { return this._sat(isAlpha, 	 'not an alpha char!'); },
+		_alphanum	: function () { return this._sat(isAlphaNum, 'not an alpha-num char!'); },
+		_space 		: function () { return this._sat(isSpace, 	 'not a space char!'); },
 
-  // Many combinator
-  var _many =function(p) {
-    return _choice(_many1(p), _return([]));
-  };
+		_choice : function() {
+			var ps = Array.prototype.slice.apply(arguments);
+			return pushParser(function() { 
+        for (var i = 0; i < ps.lenght; i++) {
+					try {
+						pushValue(ps[i].parse(_state.input).value()); 
+						_state.input = ps[i].input();
+						return;
+					} catch (e) {
+					  if (!e.type || e.type !== "parse_error") throw e;
+					}
+        }
+				throw error("No parser match!");
+			});
+		},
 
-  // Many1
-  // JavaScript is not lazy, so the inner parser function is required
-  var _many1 = function(p) {
-    return function(state) {
-      return _do(p, _many(p)).doReturn(cons)(state);
-    };
-  };
+		_char : function(c) { 
+			return this._sat(curry(isEqual)(c), "Expecting a '" + c + "'!"); 
+		},
 
-  // try p until b matches
-  // TODO: try without try-catch
-  var _manyTill = function(p, b) {
-    var _mt = function(state) {
-      try {
-        b(state);
-        return _return([])(state);
-      } catch (e) {
-        return _do(p, _mt).doReturn(cons)(state);
-      }
-    };
-    return _mt;
-  };
+    _string : function(s) {
+      var p = this._do();
+      for (var i = 0; i < s.length; i++) p = p._char(s[i]);
+      p.join();
+      return this;
+    },
 
-  // A char in match
-  var _oneOf = function(match) {
-    return _sat(function(c) { return match.indexOf(c) != -1; }, "Not OneOf '" + match + "'!");
-  };
+		bind : function(p) {
+			return pushParser(function() { 
+        pushValue(p.parse(_state.input, _state.data, _state.line, _state.column).value()); 
+        _state.input = p.input();
+        _state.line = p.line();
+        _state.column = p.column();
+      });
+		},
 
-  // Not a char in match
-  var _noneOf = function(match) {
-    return _sat(function(c) { return match.indexOf(c) == -1; }, "Not NoneOf '" + match + "'!");
-  };
+		_do : function() {
+			return pushParser(function() { addValueStack(); });
+		},
 
-  // -- Tokenizer -----------------------------------------------------------
+		reduce : function(f) {
+			return pushParser(function() { reduceValueStack(f); });
+		},
 
-  // Truncates leading spaces from a input
-  var _space = _do(_many(_sat(isSpace))).doReturn(function(a) { return ""; }, "Not a Space!");
+		join : function(c) {
+			return pushParser(function() { reduceValueStack(function(vs) { return vs.join(c || ''); }); });
+		},
 
-  // Ignore spacing around to parsed input
-  var _token = function(p) {
-    return _do(_space, p, _space).doReturn(function(a,b,c) { return b; });
-  };
+		int : function(f) {
+			return pushParser(function() { reduceValueStack(function(vs) { 
+          var v = parseInt(vs.join(''));
+          return (!f)? v : f(v);
+				}); });
+		},
 
-  // Parse next char sequence
-  var _seq = _do(_token(_many(_sat(isAlphaNum, "Not an AlphaNum!")))).doReturn(joinArray());
+    _many : function(p) {
+      return this._choice(this._many1(p), this._return([]));
+    },
 
-  // Parse next symbol str
-  var _symbol = function(str) {
-    return _token(_string(str));
-  };
+    _many1 : function(p) {
+      var that = this;
+      return pushParser(function() {
+        return that.bind(p).parse(_state.input).value();
+      });
+    },
 
-  // Parse new line
-  var _eol = _symbol("\n");
+		parse : function(input, data, line, column) {
+      _state = { input  : input
+               , line   : line || 1 
+               , column : column || 0
+               , data   : data };
+			_value_stack  = [];
+			addValueStack();
+			for (var i = 0; i < _parser_stack.length; i++) {
+				_parser_stack[i].call();
+			}
+			return this;
+		},
 
-  // EOF or end of input parser
-  var _eof = function(state) {
-    if (nullInput(state.input)) return _return("")(state);
-    throw mkError("Not EOF!", state);
-  }
+		value : function() {
+			return _value_stack[0];
+		},
 
-  // -- The Parser function -------------------------------------------------
+		input : function() {
+			return _state.input;
+		},
 
-  // Check if entire input is consumed and throw an exception
-  var parse = function(parser, input, data) {
-    var result = parser(mkState(input, data));
-    if (nullInput(result.state.input)) {
-      return result.value;
-    }
-    throw mkError("Unused input: '" + result.state.input + "'", result.state);
-  };
+    line : function() {
+      return _state.line;
+    },
 
-  // -- The Parser object exports public functions --------------------------
- 
-  var p = { };
+    column : function() {
+      return _state.column;
+    },
 
-  p._return     = _return;
-  p._failure    = _failure;
+	};
 
-  p._do         = _do;
-
-  p._item       = _item;
-  p._digit      = _sat(isDigit,     "Not a Digit!");
-  p._alpha      = _sat(isAlpha,     "Not an Alpha char!");
-  p._alphanum   = _sat(isAlphaNum,  "Not an AlphaNum char!");
-  p._lower      = _sat(isLower,     "Not a lower case char!");
-  p._upper      = _sat(isUpper,     "Not a upper case char!");
-
-  p._choice     = _choice;
-  p._char       = _char;
-  p._string     = _string;
-  p._many       = _many;
-  p._many1      = _many1;
-
-  p._space      = _space;
-  p._token      = _token;
-  p._seq        = _seq;
-  p._symbol     = _symbol;
-  p._eol        = _eol;
-  p._eof        = _eof;
-
-  p._manyTill   = _manyTill;
-  p._oneOf      = _oneOf;
-  p._noneOf     = _noneOf;
-
-  p.parse       = parse;
-
-  p.cons            = cons;
-  p.joinArray       = joinArray;
-  p.errorToString   = errorToString;
-
-  return p;
-
-}();
+	return p;
+};
 

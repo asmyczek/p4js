@@ -1,0 +1,20 @@
+<html>
+  <head>
+    <script src="src/p4.js"></script>
+  </head>
+<body>
+	<script>
+		// var p = $P()._choice($P()._item()._digit(), $P()._item());
+		// var p = $P()._char('a');
+		var p = $P()._do()._digit()._digit().int();
+		// var p = $P()._digit()._item().bind($P()._digit()._digit())._char('\n')._digit()._digit();
+		try {
+			var r = p.parse("12abcd1");
+			alert(">> " + p.value() + " - " + p.input());
+		} catch(e) {
+			alert("Exception: " + e.print());
+		}
+
+	</script>
+</body>
+</html>
