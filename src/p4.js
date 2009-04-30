@@ -40,8 +40,9 @@ var P4JS = $P = function() {
     };
 
     c.runParser = function(p) {
-        this.pushValue(p.parseWithState(this.state).value()); 
-        this.state = p.state;
+      p.parseWithState(this.state)
+      this.pushValue(p.value()); 
+      this.state = p.state;
     };
 
     c.error = function(err) {
@@ -53,22 +54,12 @@ var P4JS = $P = function() {
              } };
     };
 
-    c.curry = function(f) {
-      return function() {
-        var args = Array.prototype.slice.apply(arguments);
-        return function () {
-          return f.apply(null, args.concat(Array.prototype.slice.apply(arguments)));
-        };
-      };
-    };
-
-    c.isDigit    = function(c)    { return ((c >= "0") && (c <= "9")); };
-    c.isLower    = function(c)    { return ((c >= "a") && (c <= "z")); };
-    c.isUpper    = function(c)    { return ((c >= "A") && (c <= "Z")); };
-    c.isAlpha    = function(c)    { return isLower(c) || isUpper(c); };
-    c.isAlphaNum = function(c)    { return isAlpha(c) || isDigit(c); };
-    c.isSpace    = function(c)    { return ((c === ' ') || (c === '\t')); };
-    c.isEqual    = function(a, b) { return a === b };
+    c.isDigit    = function(ch)    { return ((ch >= "0") && (ch <= "9")); };
+    c.isLower    = function(ch)    { return ((ch >= "a") && (ch <= "z")); };
+    c.isUpper    = function(ch)    { return ((ch >= "A") && (ch <= "Z")); };
+    c.isAlpha    = function(ch)    { return this.isLower(ch) || this.isUpper(ch); };
+    c.isAlphaNum = function(ch)    { return this.isAlpha(ch) || this.isDigit(ch); };
+    c.isSpace    = function(ch)    { return ((ch === ' ') || (ch === '\t')); };
 
     c.parse = function(input, data) {
       return this.parseWithState(createState(input, data));
@@ -116,13 +107,21 @@ P4JS.lib = {
         var ch = s.input[0];
         this.pushValue(ch); 
         s.input = s.input.slice(1); 
-        (this.isEqual(ch, "\n"))? s.nextLine() : s.nextChar();
+        (ch === "\n")? s.nextLine() : s.nextChar();
       }
     });
   },
 
   _sat : function(f, error_msg) {
-    return this._do()._item().reduce(function(vs) { if (f(vs[0])) { return vs[0]; } else { throw this.error(error_msg);} });
+    var that = this;
+    var comp = function(vs) { 
+        if (f.apply(that, [vs[0]])) { 
+          return vs[0]; 
+        } else { 
+          throw that.error(error_msg);
+        }
+      };
+    return this._do()._item().reduce(comp);
   },
 
   _digit 		: function () { return this._sat(this.isDigit, 	 'not a digit!'); },
@@ -148,7 +147,7 @@ P4JS.lib = {
   },
 
   _char : function(c) { 
-    return this._sat(this.curry(this.isEqual)(c), "Expecting a '" + c + "'!"); 
+    return this._sat(function(i) { return (i == c); }, "Expecting a '" + c + "'!"); 
   },
 
   _string : function(s) {
@@ -172,7 +171,7 @@ P4JS.lib = {
     return this.reduceValueStack(function(vs) { 
       var v = parseInt(vs.join(''));
       return (!f)? v : f(v);
-      });
+    });
   },
 
   _many : function(p) {
