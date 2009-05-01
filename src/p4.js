@@ -1,12 +1,13 @@
 var P4JS = $P = function() {
 
-  var createState = function(input, data) {
-    return { input    : input
-           , line     : 1 
-           , column   : 0
-           , data     : data
-           , nextLine : function()  { this.line++; this.column = 0; }
-           , nextChar : function () { this.column++; }};
+  var createState = function(input, data, line, column) {
+    var s = { input    : input
+            , line     : line || 1 
+            , column   : column || 0
+            , data     : data };
+    s.nextLine = function()  { this.line++; this.column = 0; };
+    s.nextChar = function () { this.column++; };
+    return s;
   };
 
   var createContext = function(lib) {
@@ -31,7 +32,10 @@ var P4JS = $P = function() {
     };
 
     c.reduceValueStack = function(f) {
-      return this.pushParser(function() { pushValue(f(value_stack.pop())) });
+      return this.pushParser(function() { 
+        var v = f(value_stack.pop());
+        if (v !== undefined) pushValue(v);
+      });
     };
 
     c.pushParser = function(f) {
@@ -40,7 +44,7 @@ var P4JS = $P = function() {
     };
 
     c.runParser = function(p) {
-      p.parseWithState(this.state)
+      p.parseWithState(createState( this.state.input, this.state.data, this.state.line, this.state.column));
       this.pushValue(p.value()); 
       this.state = p.state;
     };
@@ -67,7 +71,7 @@ var P4JS = $P = function() {
 
     c.parseWithState = function(state) {
       this.state = state;
-      value_stack  = [];
+      value_stack = [];
       value_stack.push([]);
       for (var i = 0; i < parser_stack.length; i++) {
         parser_stack[i].apply(this);
@@ -203,6 +207,30 @@ P4JS.lib = {
   _noneOf : function(match) {
     return this._sat(function(c) { return match.indexOf(c) == -1; }, "Not NoneOf '" + match + "'!");
   },
+
+  // -- Tokenizer -----------------------------------------------------------
+
+  _space : function() {
+    return this._do()._many($P()._sat(this.isSpace)).reduce(function(a) { return undefined; });
+  },
+
+  _token : function(p) { 
+    return this._do()._space().bind(p)._space().reduce(function(vs) { return vs[0]; });
+  },
+
+  _seq : function() {
+    return this._token($P()._do()._many($P()._sat(this.isAlphaNum, "Not an AlphaNum!")).join());
+  },
+
+  _symbol : function(str) {
+    return this._token($P()._string(str));
+  },
+
+  _eol : function() { return this._symbol('\n'); },
+
+  _eoi : function() {
+    return this.pushParser(function() { if (this.state.input && this.state.input !== '') throw this.error("Not EOI!"); });
+  }
 
 };
 

@@ -7,13 +7,17 @@
 		// var p = $P()._choice($P()._item()._digit(), $P()._item());
 		// var p = $P()._item();
 		// var p = $P()._char('a');
-		// var p = $P()._do()._digit()._digit().int();
-		// var p = $P()._digit()._item().bind($P()._digit()._digit())._char('\n')._digit()._digit();
-    var p = $P()._manyTill($P()._digit(), $P()._alpha())._item()._item();
+		var p = $P()._digit()._item().bind($P()._digit()._digit())._char('\n')._digit()._digit();
+    // var p = $P()._manyTill($P()._digit(), $P()._alpha())._item()._item();
+    // var p = $P()._digit().bind($P()._digit())._item();
+    // var p = $P()._choice($P()._alpha(), $P()._digit());
+    // var p = $P()._do()._symbol('123')._eol()._seq().join();
+    // var p = $P()._eoi();
 		try {
-			var r = p.parse("123aabcd1");
-			alert(">> " + p.value() + " - " + p.input());
-		} catch(e) {
+      var r = p.parse("1a11\n11");
+			// var r = p.parse("  123  aabcd1");
+			alert(">> '" + p.value() + "' - " + p.input());
+	  } catch(e) {
 			alert("Exception: " + ((e.print)? e.print() : e));
 		}
 
