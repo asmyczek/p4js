@@ -33,7 +33,8 @@ var P4JS = $P = function() {
 
     c.reduceValueStack = function(f) {
       return this.pushParser(function() { 
-        var v = f(value_stack.pop());
+        var vs = value_stack.pop();
+        var v = (!f)? vs : f(vs);
         if (v !== undefined) pushValue(v);
       });
     };
@@ -98,11 +99,11 @@ var P4JS = $P = function() {
 
 P4JS.lib = {
 
-  _return : function(v) {
+  const : function(v) {
     return this.pushParser(function() { this.pushValue(v); });
   },
 
-  _item : function() {
+  item : function() {
     return this.pushParser(function() { 
       var s = this.state;
       if (!s.input || s.input === '') {
@@ -116,7 +117,7 @@ P4JS.lib = {
     });
   },
 
-  _sat : function(f, error_msg) {
+  sat : function(f, error_msg) {
     var that = this;
     var comp = function(vs) { 
         if (f.apply(that, [vs[0]])) { 
@@ -125,17 +126,17 @@ P4JS.lib = {
           throw that.error(error_msg);
         }
       };
-    return this._do()._item().reduce(comp);
+    return this.do().item().reduce(comp);
   },
 
-  _digit 		: function () { return this._sat(this.isDigit, 	 'not a digit!'); },
-  _lower 		: function () { return this._sat(this.isLower, 	 'not a lower char!'); },
-  _upper 		: function () { return this._sat(this.isUpper, 	 'not an upper char!'); },
-  _alpha 		: function () { return this._sat(this.isAlpha, 	 'not an alpha char!'); },
-  _alphanum	: function () { return this._sat(this.isAlphaNum, 'not an alpha-num char!'); },
-  _space 		: function () { return this._sat(this.isSpace, 	 'not a space char!'); },
+  digit 		: function () { return this.sat(this.isDigit, 	 'not a digit!'); },
+  lower 		: function () { return this.sat(this.isLower, 	 'not a lower char!'); },
+  upper 		: function () { return this.sat(this.isUpper, 	 'not an upper char!'); },
+  alpha 		: function () { return this.sat(this.isAlpha, 	 'not an alpha char!'); },
+  alphanum	: function () { return this.sat(this.isAlphaNum, 'not an alpha-num char!'); },
+  space 		: function () { return this.sat(this.isSpace, 	 'not a space char!'); },
 
-  _choice : function() {
+  choice : function() {
     var ps = Array.prototype.slice.apply(arguments);
     return this.pushParser(function() { 
       for (var i = 0; i < ps.length; i++) {
@@ -150,13 +151,13 @@ P4JS.lib = {
     });
   },
 
-  _char : function(c) { 
-    return this._sat(function(i) { return (i == c); }, "Expecting a '" + c + "'!"); 
+  char : function(c) { 
+    return this.sat(function(i) { return (i == c); }, "Expecting a '" + c + "'!"); 
   },
 
-  _string : function(s) {
-    var p = this._do();
-    for (var i = 0; i < s.length; i++) p = p._char(s[i]);
+  string : function(s) {
+    var p = this.do();
+    for (var i = 0; i < s.length; i++) p = p.char(s[i]);
     p.join();
     return this;
   },
@@ -165,11 +166,17 @@ P4JS.lib = {
     return this.pushParser(function() { this.runParser(p); });
   },
 
-  _do : function() { return this.addValueStack(); },
+  do : function() { return this.addValueStack(); },
+
+  return : function() { return this.reduceValueStack(); },
 
   reduce : function(f) { return this.reduceValueStack(f); },
 
-  join : function(c) { return this.reduceValueStack(function(vs) { return vs.join(c || ''); }); },
+  join : function(c, f) { return this.reduceValueStack(function(vs) { 
+      var v = vs.join(c || ''); 
+      return (!f)? v : f(v);
+    });
+  },
 
   int : function(f) {
     return this.reduceValueStack(function(vs) { 
@@ -178,15 +185,15 @@ P4JS.lib = {
     });
   },
 
-  _many : function(p) {
+  many : function(p) {
     return this.pushParser(function() { try { while (true) this.runParser(p); } catch (e) { } });
   },
 
-  _many1 : function(p) {
-    return this.bind(p)._many(p);
+  many1 : function(p) {
+    return this.bind(p).many(p);
   },
 
-  _manyTill : function(p, b) {
+  manyTill : function(p, b) {
     var that = this;
     var rec = function(p, b) {
       try {
@@ -200,35 +207,35 @@ P4JS.lib = {
     return this.pushParser(function() { rec(p, b); });
   },
 
-  _oneOf : function(match) {
-    return this._sat(function(c) { return match.indexOf(c) != -1; }, "Not OneOf '" + match + "'!");
+  oneOf : function(match) {
+    return this.sat(function(c) { return match.indexOf(c) != -1; }, "Not OneOf '" + match + "'!");
   },
 
-  _noneOf : function(match) {
-    return this._sat(function(c) { return match.indexOf(c) == -1; }, "Not NoneOf '" + match + "'!");
+  noneOf : function(match) {
+    return this.sat(function(c) { return match.indexOf(c) == -1; }, "Not NoneOf '" + match + "'!");
   },
 
   // -- Tokenizer -----------------------------------------------------------
 
-  _space : function() {
-    return this._do()._many($P()._sat(this.isSpace)).reduce(function(a) { return undefined; });
+  space : function() {
+    return this.do().many($P().sat(this.isSpace)).reduce(function(a) { return undefined; });
   },
 
-  _token : function(p) { 
-    return this._do()._space().bind(p)._space().reduce(function(vs) { return vs[0]; });
+  token : function(p) { 
+    return this.do().space().bind(p).space().reduce(function(vs) { return vs[0]; });
   },
 
-  _seq : function() {
-    return this._token($P()._do()._many($P()._sat(this.isAlphaNum, "Not an AlphaNum!")).join());
+  seq : function() {
+    return this.token($P().do().many($P().sat(this.isAlphaNum, "Not an AlphaNum!")).join());
   },
 
-  _symbol : function(str) {
-    return this._token($P()._string(str));
+  symbol : function(str) {
+    return this.token($P().string(str));
   },
 
-  _eol : function() { return this._symbol('\n'); },
+  eol : function() { return this.symbol('\n'); },
 
-  _eoi : function() {
+  eoi : function() {
     return this.pushParser(function() { if (this.state.input && this.state.input !== '') throw this.error("Not EOI!"); });
   }
 
