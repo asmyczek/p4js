@@ -8,42 +8,47 @@
         </style>
 		<script type="text/javascript" src="../src/p4.js"></script>
 		<script type="text/javascript">
-          // Unit test helpers
-          var p = P4JS;
+			// Ok output
+			var ok = function(desc) {
+				document.writeln(desc + " - <span class='ok'>OK</span><br/>");
+			};
 
-          // Ok output
-          var ok = function(desc) {
-            document.writeln(desc + " - <span class='ok'>OK</span><br/>");
-          };
+			// Error output
+			var error = function(desc, msg) {
+				document.writeln(desc + " - <span class='error'>" + msg + "</span><br/>");
+			};
 
-          // Error output
-          var error = function(desc, msg) {
-            document.writeln(desc + " - <span class='error'>" + msg + "</span><br/>");
-          };
+			// Assert function
+			var assert = function(parser, input, result, desc) {
+				try {
+					var value = parser.parse(input);
+					if (value.equal(result)) {
+						ok(desc);
+					} else {
+						error(desc, "Error: expecting '" + result + "' but result is '" + value + "' !");
+					}
+				} catch(e) {
+					error(desc, "Exception: " + e.message);
+				}
+			};
 
-          // Assert function
-          var assert = function(parser, input, result, desc) {
-            try {
-              var value = p.parse(parser, input);
-              if (result === value) {
-                  ok(desc);
-              } else {
-                  error(desc, "Error: expecting '" + result + "' but result is '" + value + "' !");
-              }
-            } catch(e) {
-              error(desc, "Exception: " + e.message);
-            }
-          };
+			// Assert exception is thrown
+			var assertException = function(parser, input, desc) {
+				try {
+					var value = p.parse(parser, input);
+					error(desc, "Exception expected, but not thrown!");
+				} catch(e) {
+					ok(desc);
+				}
+			};
 
-          // Assert exception is thrown
-          var assertException = function(parser, input, desc) {
-            try {
-              var value = p.parse(parser, input);
-              error(desc, "Exception expected, but not thrown!");
-            } catch(e) {
-              ok(desc);
-            }
-          };
+			Array.prototype.equal = function(to) {
+				if (this.length != to.length) return false;
+				for (var i = 0; i < to.length; i++) {
+					if (this[i] !== to[i]) return false;
+				}
+				return true;
+			}
 
 		</script>
 	</head>
@@ -53,46 +58,45 @@
 		<p>
         <div><b>Basic combinators</b></div>
 		<script type="text/javascript">
-		assert(p._return("abc"), "", "abc", "_return");
-		assertException(p._failure("Exception"), "abc", "_failure");
+		assert($P().return("abc"), "", ["abc"], "return");
+		assertException($P().failure("Exception"), "abc", "failure");
+		assert($P().item(), "a", ["a"], "item");
+		assert($P().digit(), "1", ["1"], "digit");
+		assert($P().alpha(), "a", ["a"], "alpha");
+		assert($P().alphanum(), "a", ["a"], "alphanum(alpha)");
+		assert($P().alphanum(), "1", ["1"], "alphanum(num)");
+		assert($P().lower(), "a", ["a"], "lower");
+		assert($P().upper(), "A", ["A"], "upper");
+		assert($P().item().item().item(), "abc", ["a","b","c"], "3x item");
 
-		assert(p._item, "a", "a", "_item");
-		assert(p._digit, "1", "1", "_digit");
-		assert(p._alpha, "a", "a", "_alpha");
-		assert(p._alphanum, "a", "a", "_alphanum(alpha)");
-		assert(p._alphanum, "1", "1", "_alphanum(num)");
-		assert(p._lower, "a", "a", "_lower");
-		assert(p._upper, "A", "A", "_upper");
+		assert($P().char("a"), "a", ["a"], "char");
+		assert($P().string("ab1"), "ab1", ["ab1"], "string");
+		assert($P().choice($P().char('a'), $P().char('b')), "a", ["a"], "choice(1)");
+		assert($P().choice($P().char('a'), $P().char('b')), "b", ["b"], "choice(2)");
 
-		assert(p._char("a"), "a", "a", "_char");
-		assert(p._string("ab1"), "ab1", "ab1", "_string");
-		assert(p._choice(p._char('a'), p._char('b')), "a", "a", "_choice(1)");
-		assert(p._choice(p._char('a'), p._char('b')), "b", "b", "_choice(2)");
-
-		assert(p._do(p._many(p._digit)).doReturn(p.joinArray()), "123", "123", "_many");
-		assert(p._do(p._many(p._digit)).doReturn(p.joinArray()), "", "", "_many(empty)");
-		assert(p._do(p._many1(p._digit)).doReturn(p.joinArray()), "123", "123", "_many1");
-		assertException(p._do(p._many1(p._digit)).doReturn(p.joinArray()), "", "_many1(empty)");
-
-		assert(p._do(p._manyTill(p._item, p._char(",")), p._char(",")).doReturn(p.joinArray()), "abc,", "abc", "_manyTill");
-		assert(p._oneOf("abc"), "a", "a", "_oneOf");
-		assertException(p._oneOf("abc"), "1abc,", "_oneOf(negative)");
-		assert(p._noneOf("abc"), "1", "1", "_noneOf");
-		assertException(p._noneOf("abc"), "abc,", "_noneOf(negative)");
-
+		assert($P().many($P().digit()), "123", ["1","2","3"], "many");
+		assert($P().many($P().digit()), "abc", [], "many(empty)");
+		assert($P().do().many($P().digit()).join(), "123", ["123"], "do.many(digit).join");
+		assert($P().do().many($P().digit()).join(), "", [], "do.many(empty)");
+		assert($P().do().many1($P().digit()).join(), "123", ["123"], "do.many1");
+		assertException($P().do().many1($P().digit()).join(), "", "do.many1(empty)");
+		assert($P().oneOf("abc"), "a", "a", "oneOf");
+		assertException($P().oneOf("abc"), "1abc,", "oneOf(negative)");
+		assert($P().noneOf("abc"), "1", "1", "noneOf");
+		assertException($P().noneOf("abc"), "abc,", "noneOf(negative)");
 		</script>
 		</p>
 
 		<p>
 		<div><b>Tokenizer</b></div>
 		<script type="text/javascript">
-		assert(p._space, "  ", "", "_space");
-		assert(p._token(p._string("ab1")), "  ab1   ", "ab1", "_token");
-		assert(p._seq, "  ab1   ", "ab1", "_seq");
-		assert(p._symbol("ab1"), "  ab1   ", "ab1", "_symbol");
-		assert(p._eol, "\n", "\n", "_eol");
-		assert(p._eof, "", "", "_eof (empty input)");
-		assert(p._eof, undefined, "", "_eof (undefined input)");
+		assert($P().space(), "  ", "", "space");
+		assert($P().token($P().string("ab1")), "  ab1   ", ["ab1"], "token");
+		assert($P().seq(), "  ab1   ", ["ab1"], "seq");
+		assert($P().symbol("ab1"), "  ab1   ", ["ab1"], "symbol");
+		assert($P().eol(), "\n", ["\n"], "eol");
+		assert($P().eoi(), "", [], "eoi (empty input)");
+		assert($P().eoi(), undefined, [], "eoi (undefined input)");
 		</script>
 		</p>
 

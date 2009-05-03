@@ -1,5 +1,20 @@
 var P4JS = $P = function() {
 
+  var createValueStack = function() {
+    var stack = [[]];
+
+    var assertNotEmpty = function() {
+      if (stack.length === 0) throw "Invalid parser, value stack is empty!";
+    };
+
+    var s = {};
+    s.top       = function()  { assertNotEmpty(); return stack[stack.length - 1]; };
+    s.pushValue = function(v) { assertNotEmpty(); return stack[stack.length - 1].push(v); };
+    s.push  = function() { stack.push([]); return this; };
+    s.pop   = function()  { assertNotEmpty(); return stack.pop(); };
+    return s;
+  };
+
   var createState = function(input, data, line, column) {
     var s = { input    : input
             , line     : line || 1 
@@ -13,11 +28,6 @@ var P4JS = $P = function() {
   var createContext = function(lib) {
 
     var parser_stack = [];
-    var value_stack  = [];
-
-    var pushValue = function(v) {
-      value_stack[value_stack.length - 1].push(v);
-    };
 
     var C = function () {};
     C.prototype = lib;
@@ -25,37 +35,33 @@ var P4JS = $P = function() {
 
     c.state = undefined;
 
-    c.pushValue = pushValue;
-
-    c.addValueStack = function() {
-      return this.pushParser(function() { value_stack.push([]); });
-    };
-
-    c.reduceValueStack = function(f) {
-      return this.pushParser(function() { 
-        var vs = value_stack.pop();
-        var v = (!f)? vs : f(vs);
-        if (v !== undefined) pushValue(v);
-      });
-    };
-
     c.pushParser = function(f) {
       parser_stack.push(f);
       return this;
     };
 
-    c.runParser = function(p) {
-      p.parseWithState(createState( this.state.input, this.state.data, this.state.line, this.state.column));
-      this.pushValue(p.value()); 
+    c.runParser = function(p, vs) {
+      var v = p.parseWithState(createState(this.state.input, this.state.data, this.state.line, this.state.column));
+      vs.pushValue(v[0]);
       this.state = p.state;
     };
+
+    c.popValueStack = function(f) {
+      return this.pushParser(function(vs) { 
+        var lv = vs.pop();
+        var v = (!f)? lv : f.apply(this, [lv]);
+        if (v !== undefined) vs.pushValue(v);
+      });
+    },
 
     c.error = function(err) {
       return { type    : "parse_error"
              , message : err
              , state   : this.state
              , print   : function() {
-               return "Parser Error: " + err + " at (line " + this.state.line + ", column " + this.state.column + ")";
+               return "Parser Error: " + err + 
+                      " at (line " + this.state.line + 
+                      ", column " + this.state.column + ")";
              } };
     };
 
@@ -72,16 +78,30 @@ var P4JS = $P = function() {
 
     c.parseWithState = function(state) {
       this.state = state;
-      value_stack = [];
-      value_stack.push([]);
+      var vs = createValueStack();
       for (var i = 0; i < parser_stack.length; i++) {
-        parser_stack[i].apply(this);
+        parser_stack[i].apply(this, [vs]);
       }
-      return this;
+      return vs.top();
     };
 
-    c.value = function() {
-      return value_stack[0];
+    c.register = function(name) {
+      if (P4JS.lib[name] !== undefined) {
+        throw "Parser function '" + name + "' exists already.";
+      }
+
+      var ps = [];
+      for (var i = 0; i < parser_stack.length; i++) {
+        ps.push(parser_stack[i]);
+      }
+      parser_stack = null;
+
+      P4JS.lib[name] = function() {
+        for (var j = 0; j < ps.length; j++) {
+          this.pushParser(ps[j]);
+        }
+        return this;
+      };
     };
 
     c.input = function() {
@@ -99,18 +119,22 @@ var P4JS = $P = function() {
 
 P4JS.lib = {
 
-  const : function(v) {
-    return this.pushParser(function() { this.pushValue(v); });
+  return : function(v) {
+    return this.pushParser(function(vs) { vs.pushValue(v); });
+  },
+
+  failure : function(error_message) {
+    return this.pushParser(function(vs) { throw this.error(error_message); });
   },
 
   item : function() {
-    return this.pushParser(function() { 
+    return this.pushParser(function(vs) { 
       var s = this.state;
       if (!s.input || s.input === '') {
         throw this.error("Empty input!");
       } else {
         var ch = s.input[0];
-        this.pushValue(ch); 
+        vs.pushValue(ch); 
         s.input = s.input.slice(1); 
         (ch === "\n")? s.nextLine() : s.nextChar();
       }
@@ -118,15 +142,13 @@ P4JS.lib = {
   },
 
   sat : function(f, error_msg) {
-    var that = this;
-    var comp = function(vs) { 
-        if (f.apply(that, [vs[0]])) { 
-          return vs[0]; 
-        } else { 
-          throw that.error(error_msg);
-        }
-      };
-    return this.do().item().reduce(comp);
+    return this.do().item().reduce(function(vs) {
+      if (f.apply(this, [vs[0]])) { 
+        return vs[0]; 
+      } else { 
+        throw this.error(error_msg);
+      }
+    });
   },
 
   digit 		: function () { return this.sat(this.isDigit, 	 'not a digit!'); },
@@ -138,10 +160,10 @@ P4JS.lib = {
 
   choice : function() {
     var ps = Array.prototype.slice.apply(arguments);
-    return this.pushParser(function() { 
+    return this.pushParser(function(vs) { 
       for (var i = 0; i < ps.length; i++) {
         try {
-          this.runParser(ps[i]);
+          this.runParser(ps[i], vs);
           return;
         } catch (e) {
           if (!e.type || e.type !== "parse_error") throw e;
@@ -163,48 +185,35 @@ P4JS.lib = {
   },
 
   bind : function(p) {
-    return this.pushParser(function() { this.runParser(p); });
+    return this.pushParser(function(vs) { this.runParser(p, vs); });
   },
 
-  do : function() { return this.addValueStack(); },
+  do : function() { return this.pushParser(function(vs) { vs.push(); }) },
 
-  return : function() { return this.reduceValueStack(); },
+  reduce : function(f) { return this.popValueStack(f); },
 
-  reduce : function(f) { return this.reduceValueStack(f); },
-
-  join : function(c, f) { return this.reduceValueStack(function(vs) { 
-      var v = vs.join(c || ''); 
-      return (!f)? v : f(v);
+  join : function(c, f) { return this.popValueStack(function(vs) { 
+      if (vs.length > 0) {
+        var v = vs.join(c || ''); 
+        return (!f)? v : f(v);
+      }
+      return undefined;
     });
   },
 
   int : function(f) {
-    return this.reduceValueStack(function(vs) { 
+    return this.popValueStack(function(vs) { 
       var v = parseInt(vs.join(''));
       return (!f)? v : f(v);
     });
   },
 
   many : function(p) {
-    return this.pushParser(function() { try { while (true) this.runParser(p); } catch (e) { } });
+    return this.pushParser(function(vs) { try { while (true) this.runParser(p, vs); } catch (e) { } });
   },
 
   many1 : function(p) {
     return this.bind(p).many(p);
-  },
-
-  manyTill : function(p, b) {
-    var that = this;
-    var rec = function(p, b) {
-      try {
-        b.parse(that.state.input);
-        return;
-      } catch (e) {
-        that.runParser(p);
-        rec(p, b);
-      }
-    };
-    return this.pushParser(function() { rec(p, b); });
   },
 
   oneOf : function(match) {
@@ -236,8 +245,9 @@ P4JS.lib = {
   eol : function() { return this.symbol('\n'); },
 
   eoi : function() {
-    return this.pushParser(function() { if (this.state.input && this.state.input !== '') throw this.error("Not EOI!"); });
+    return this.pushParser(function(vs) { if (this.state.input && this.state.input !== '') throw this.error("Not EOI!"); });
   }
 
 };
+
 
