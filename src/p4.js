@@ -10,8 +10,8 @@ var P4JS = $P = function() {
     var s = {};
     s.top       = function()  { assertNotEmpty(); return stack[stack.length - 1]; };
     s.pushValue = function(v) { assertNotEmpty(); return stack[stack.length - 1].push(v); };
-    s.push  = function() { stack.push([]); return this; };
-    s.pop   = function()  { assertNotEmpty(); return stack.pop(); };
+    s.push      = function()  { stack.push([]); return this; };
+    s.pop       = function()  { assertNotEmpty(); return stack.pop(); };
     return s;
   };
 
@@ -48,9 +48,11 @@ var P4JS = $P = function() {
 
     c.popValueStack = function(f) {
       return this.pushParser(function(vs) { 
-        var lv = vs.pop();
-        var v = (!f)? lv : f.apply(this, [lv]);
-        if (v !== undefined) vs.pushValue(v);
+        var rv = vs.pop();
+        var v = (!f)? rv : f.apply(this, [rv]);
+        if (v !== undefined) {
+          vs.pushValue(v);
+        }
       });
     },
 
@@ -142,9 +144,9 @@ P4JS.lib = {
   },
 
   sat : function(f, error_msg) {
-    return this.do().item().reduce(function(vs) {
-      if (f.apply(this, [vs[0]])) { 
-        return vs[0]; 
+    return this.do().item().reduce(function(rv) {
+      if (f.apply(this, [rv[0]])) { 
+        return rv[0]; 
       } else { 
         throw this.error(error_msg);
       }
@@ -192,9 +194,9 @@ P4JS.lib = {
 
   reduce : function(f) { return this.popValueStack(f); },
 
-  join : function(c, f) { return this.popValueStack(function(vs) { 
-      if (vs.length > 0) {
-        var v = vs.join(c || ''); 
+  join : function(c, f) { return this.popValueStack(function(rv) { 
+      if (rv.length > 0) {
+        var v = rv.join(c || ''); 
         return (!f)? v : f(v);
       }
       return undefined;
@@ -202,9 +204,12 @@ P4JS.lib = {
   },
 
   int : function(f) {
-    return this.popValueStack(function(vs) { 
-      var v = parseInt(vs.join(''));
-      return (!f)? v : f(v);
+    return this.popValueStack(function(rv) { 
+      if (rv.length > 0) {
+        var v = parseInt(rv.join(''));
+        return (!f)? v : f(v);
+      };
+      return undefined;
     });
   },
 
@@ -227,11 +232,11 @@ P4JS.lib = {
   // -- Tokenizer -----------------------------------------------------------
 
   space : function() {
-    return this.do().many($P().sat(this.isSpace)).reduce(function(a) { return undefined; });
+    return this.do().many($P().sat(this.isSpace)).reduce(function(rv) { return undefined; });
   },
 
   token : function(p) { 
-    return this.do().space().bind(p).space().reduce(function(vs) { return vs[0]; });
+    return this.do().space().bind(p).space().reduce(function(rv) { return rv[0]; });
   },
 
   seq : function() {

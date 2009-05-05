@@ -1,0 +1,68 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+	<head>
+		<title>Properties to object parse example</title>
+		<style>
+			table.table { border-collapse: collapse; }
+			table.table tr td { border:1px solid #999999; }
+		</style>
+		<script type="text/javascript" src="../src/p4.js"></script>
+		<script type="text/javascript">
+
+    var buildObject = function(result) {
+      var obj = {};
+      for (var i = 0; i < result.length; i++) {
+        obj[result[i][0]] = result[i][1];
+      }
+      return obj;
+    };
+
+		$P().do().seq().char('=').seq().reduce(function(rv, vs) { return [rv[0], rv[2]]; }).register('p2o_line');
+		$P().do().many($P().p2o_line().eol()).reduce(buildObject).register('p2o');
+
+			function parse_csv(input) {
+				var table = document.getElementById('table'),
+				    error = document.getElementById('error');
+
+				// Reset results
+				error.innerHTML = "";
+				table.innerHTML = "";
+				var len = table.childNodes.length;
+				var i;
+				for(i = 0; i < len; i++) {
+					table.removeChild(table.childNodes[i]);
+				}
+
+				// Parse and print results or error
+        var p = $P().p2o();
+				try {
+					var result = p.parse(input)[0];
+          alert(result.name1);
+				} catch(e) {
+					error.innerHTML = p.print();
+				}
+			};
+		</script>
+	</head>
+
+	<body>
+        <h3>CSV parser demo</h3>
+
+		<p>
+			<div>CVS text:</div>
+			<div>
+<textarea id="csv" rows="5" cols="40">
+name1 = value1
+name2 = value2
+name3 = value3
+</textarea>
+			</div>
+			<a href="javascript:;" onclick="parse_csv(document.getElementById('csv').value);">Parse</a>
+		</p>
+
+		<p>
+			<table id="table" class="table"></table>
+			<div id="error" style="color:red;"></div>
+		</p>
+	</body>
+</html>
