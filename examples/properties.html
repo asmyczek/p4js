@@ -37,7 +37,18 @@
         var p = $P().p2o();
 				try {
 					var result = p.parse(input)[0];
-          alert(result.name1);
+          for(var prop in result) {
+            var row = document.createElement('tr')
+            table.appendChild(row);
+
+            var name = document.createElement('td') 
+            name.innerHTML = prop;
+            row.appendChild(name);
+
+            var value = document.createElement('td') 
+            value.innerHTML = result[prop];
+            row.appendChild(value);
+          }
 				} catch(e) {
 					error.innerHTML = p.print();
 				}

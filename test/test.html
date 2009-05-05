@@ -59,6 +59,7 @@
         <div><b>Basic combinators</b></div>
 		<script type="text/javascript">
 		assert($P().return("abc"), "", ["abc"], "return");
+
 		assertException($P().failure("Exception"), "abc", "failure");
 		assert($P().item(), "a", ["a"], "item");
 		assert($P().digit(), "1", ["1"], "digit");
@@ -67,7 +68,10 @@
 		assert($P().alphanum(), "1", ["1"], "alphanum(num)");
 		assert($P().lower(), "a", ["a"], "lower");
 		assert($P().upper(), "A", ["A"], "upper");
+
+		assert($P().return('abc').item(), "d", ["abc","d"], "return.item");
 		assert($P().item().item().item(), "abc", ["a","b","c"], "3x item");
+		assert($P().do().item().item().item().join(), "abc", ["abc"], "do.3x item.join");
 
 		assert($P().char("a"), "a", ["a"], "char");
 		assert($P().string("ab1"), "ab1", ["ab1"], "string");

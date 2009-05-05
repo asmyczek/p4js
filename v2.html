@@ -4,22 +4,48 @@
   </head>
 <body>
 	<script>
-		// var p = $P()._choice($P()._item()._digit(), $P()._item());
-		// var p = $P()._item();
-		// var p = $P()._char('a');
-		var p = $P()._digit()._item().bind($P()._digit()._digit())._char('\n')._digit()._digit();
-    // var p = $P()._manyTill($P()._digit(), $P()._alpha())._item()._item();
-    // var p = $P()._digit().bind($P()._digit())._item();
-    // var p = $P()._choice($P()._alpha(), $P()._digit());
-    // var p = $P()._do()._symbol('123')._eol()._seq().join();
-    // var p = $P()._eoi();
-		try {
-      var r = p.parse("1a11\n11");
-			// var r = p.parse("  123  aabcd1");
-			alert(">> '" + p.value() + "' - " + p.input());
-	  } catch(e) {
-			alert("Exception: " + ((e.print)? e.print() : e));
-		}
+
+      var trim = function(str) { return str.replace(/^\s+|\s+$/g, ''); };
+
+/*
+      $P().do().many($P().noneOf(",\n")).join('', trim).register("csv_value");
+      //$P().addParser(function() { return this.do().csv_value().csv_next_values().return(); }).register("csv_values");
+      $P().choice(
+            $P().do().char(",").csv_values().reduce(function(vs) { return vs[1]; }), 
+            $P().return([])).register("csv_next_values");
+	  P4JS.lib.csv_values = function(vs) {
+		return this.do().csv_value().csv_next_values().join();
+	  };
+      $P().do().csv_values().eol().reduce(function(vs) { return vs[0]; }).register("csv_line");
+      $P().many($P().csv_line()).register("csv");
+      var p = $P().csv();
+*/
+
+/*
+var _value = _do(_many(_noneOf(",\n"))).doReturn(joinArray("", trim));
+var _values = function(state) { return _do(_value, _next_values).doReturn(cons)(state); };
+var _next_values = _choice(
+	  _do(_char(","), _values).doReturn(function(_,vs) { return vs; }),
+	  _return([]));
+var _line = _do(_values, _eol).doReturn(function(vs, _) { return vs; });
+var _csv = _many(_line);
+*/
+		$P().do().many($P().noneOf(",\n")).join('', trim).register("csv_value");
+		var csv_next_values = function() { $P().choice(
+				$P().do().char(",").bind(csv_values).reduce(function(vs) { return vs[1]; }), 
+				$P().return([]));
+			};
+		var csv_values = $P().do().csv_value().bind(csv_next_values()).reduce(function(rv) { alert(rv); });
+		$P().do().bind(csv_values).eol().reduce(function(vs) { return vs[0]; }).register("csv_line");
+		$P().many($P().csv_line()).register("csv");
+
+//		try {
+			var p = $P().csv_line();
+			var r = p.parse('a1,a2,a3\nb1,b2,b3');
+			alert(r);
+//		} catch(e) {
+//			alert("Exception: " + ((e.print)? e.print() : e));
+//		}
 
 	</script>
 </body>
