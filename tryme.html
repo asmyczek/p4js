@@ -1,0 +1,80 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+	<head>
+		<title>Interactive parser console</title>
+		<script type="text/javascript" src="./src/p4.js"></script>
+		<script type="text/javascript">
+
+			var parse = function(input, parser) {
+				var output = document.getElementById('output'),
+					error = document.getElementById('error'),
+					u_input = document.getElementById('u_input');
+
+				output.innerHTML = '';
+				error.innerHTML = '';
+				u_input.innerHTML = '';
+
+				try {
+					eval(parser);
+					var result = p.parse(input);
+					output.innerHTML = result;
+					u_input.innerHTML = p.input();
+				} catch(e) {
+					if (e.print !== undefined) {
+						error.innerHTML = e.print();
+					} else {
+						error.innerHTML = e;
+					}
+				}
+			};
+
+		</script>
+	</head>
+
+	<body>
+        <h3>Try me</h3>
+
+		<table>
+			<tr>
+				<td>Input:</td>
+				<td>Parser:</td>
+			</tr>
+			<tr>
+				<td>
+<textarea id="input" rows="10" cols="60">
+abc 123
+</textarea>
+			</td>
+			<td>
+<textarea id="parser" rows="10" cols="60">
+// int parser
+$P().do().many($P().digit()).join().register('integer');
+
+var p = $P().many($P().alpha()).token($P().integer());
+</textarea>
+			</td>
+			</tr>
+		</table>
+
+		<p>
+			<a href="javascript:;" onclick="parse(document.getElementById('input').value, document.getElementById('parser').value);">Parse</a>
+		</p>
+
+		<table>
+			<tr>
+				<td width="50%">Output:</td>
+				<td>Unconsumed input:</td>
+			</tr>
+			<tr>
+				<td>
+					<div id="output"></div>
+					<div id="error" style="color:red;"></div>
+				</td>
+			<td>
+				<div id="u_input"></div>
+			</td>
+			</tr>
+		</table>
+
+	</body>
+</html>

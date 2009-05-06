@@ -152,10 +152,11 @@ var P4JS = $P = function() {
       return vs.top();
     };
 
-    // Register this parser in the default lib under argument name
+    // Register this parser in the default lib under argument name.
+    // Returns false if a parser for name exists already, true otherwise.
     c.register = function(name) {
       if (P4JS.lib[name] !== undefined) {
-        throw "Parser function '" + name + "' exists already.";
+        return false;
       }
 
       var ps = [];
@@ -170,6 +171,7 @@ var P4JS = $P = function() {
         }
         return this;
       };
+      return true;
     };
 
     // Return not consumed input
