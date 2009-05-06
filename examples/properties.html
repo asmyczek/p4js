@@ -17,8 +17,8 @@
       return obj;
     };
 
-		$P().do().seq().char('=').seq().reduce(function(rv, vs) { return [rv[0], rv[2]]; }).register('p2o_line');
-		$P().do().many($P().p2o_line().eol()).reduce(buildObject).register('p2o');
+		$P().do().seq().char('=').seq().eol().reduce(function(rv) { return [rv[0], rv[2]]; }).register('p2o_line');
+		$P().do().many($P().p2o_line()).reduce(buildObject).register('p2o');
 
 			function parse_csv(input) {
 				var table = document.getElementById('table'),
@@ -38,16 +38,18 @@
 				try {
 					var result = p.parse(input)[0];
           for(var prop in result) {
-            var row = document.createElement('tr')
-            table.appendChild(row);
+            if (prop !== '') {
+              var row = document.createElement('tr')
+              table.appendChild(row);
 
-            var name = document.createElement('td') 
-            name.innerHTML = prop;
-            row.appendChild(name);
+              var name = document.createElement('td') 
+              name.innerHTML = prop;
+              row.appendChild(name);
 
-            var value = document.createElement('td') 
-            value.innerHTML = result[prop];
-            row.appendChild(value);
+              var value = document.createElement('td') 
+              value.innerHTML = result[prop];
+              row.appendChild(value);
+            }
           }
 				} catch(e) {
 					error.innerHTML = p.print();

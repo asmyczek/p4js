@@ -1,73 +1,62 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
 	<head>
-		<title>A simple arithmetic parser</title>
+		<title>A small arithmetic parser</title>
 		<script type="text/javascript" src="../src/p4.js"></script>
 		<script type="text/javascript">
-      		var p = P4JS;
 
-			// Used combinators
-			var _do       = p._do,
-				_return   = p._return,
-				_many1    = p._many1,
-				_choice   = p._choice,
-				_token    = p._token,
-				_digit    = p._digit,
-				_symbol   = p._symbol,
-				joinArray = p.joinArray;
+		// Natural number
+		$P().do().token($P().many1($P().digit())).int().register("nat");
 
-			// Natural number
-			var _nat = _do(_token(_many1(_digit))).doReturn(joinArray("", parseInt));
+		// Helper function to parse float numbers
+		var div10 = function(n, f) {
+			var fn = Math.pow(10, f);
+			return (n > fn)? div10(n, f+1) : n / fn;
+		};
 
-      // Helper function to parse float numbers
-      var div10 = function(n, f) {
-        var fn = Math.pow(10, f);
-        return (n > fn)? div10(n, f+1) : n / fn;
-      };
+		// Number parser
+		$P().do().nat().reduce(function(rv) {
+			return this.choice(
+				$P().do().symbol(".").nat().reduce(function(rv) { return rv[0] + div10(rv[1], 0); }),
+				$P().return(rv[0]));
+		}).regiser("num");
 
-       // Number parser
-      var _num = _do(_nat).doResult(
-        function(i) {
-          return _choice(
-            _do(_symbol("."), _nat).doReturn(function(_, f) { return i + div10(f, 0); }),
-            _return(i));
-        });
+/*
+// <Factor> ::= <Num> | ( <Exp> ) | - <Factor>
+var _factor = function(s) {
+return _choice(
+_do(_symbol("("), _exp, _symbol(")")).doReturn(function(_, f, __) { return f; }),
+_do(_symbol("-"), _factor).doReturn(function(_, f) { return 0.0 - f; }),
+_do(_symbol("~"), _exp).doReturn(function(_, f) { return Math.sqrt(f); } ),
+_num)(s);
+};
 
-			// <Factor> ::= <Num> | ( <Exp> ) | - <Factor>
-			var _factor = function(s) {
-				return _choice(
-					_do(_symbol("("), _exp, _symbol(")")).doReturn(function(_, f, __) { return f; }),
-					_do(_symbol("-"), _factor).doReturn(function(_, f) { return 0.0 - f; }),
-          _do(_symbol("~"), _exp).doReturn(function(_, f) { return Math.sqrt(f); } ),
-					_num)(s);
-			};
+// <Expo> ::=  <Factor> * <Expo> | <Factor> / <Expo> | <Factor>
+var _expo = _do(_factor).doResult(
+function(f) {
+return _choice(
+_do(_symbol("^"), _expo).doReturn(function(_, t) { return Math.pow(f, t); } ),
+_return(f));
+});
 
-      // <Expo> ::=  <Factor> * <Expo> | <Factor> / <Expo> | <Factor>
-      var _expo = _do(_factor).doResult(
-        function(f) {
-          return _choice(
-            _do(_symbol("^"), _expo).doReturn(function(_, t) { return Math.pow(f, t); } ),
-            _return(f));
-        });
-      
-      // <Term> ::=  <Expo> * <Term> | <Expo> / <Term> | <Expo>
-			var _term = _do(_expo).doResult(
-				function(f) {
-					return _choice(
-						_do(_symbol("*"), _term).doReturn(function(_, t) { return f * t; } ),
-						_do(_symbol("/"), _term).doReturn(function(_, t) { return f / t; } ),
-						_return(f));
-				});
+// <Term> ::=  <Expo> * <Term> | <Expo> / <Term> | <Expo>
+var _term = _do(_expo).doResult(
+function(f) {
+return _choice(
+_do(_symbol("*"), _term).doReturn(function(_, t) { return f * t; } ),
+_do(_symbol("/"), _term).doReturn(function(_, t) { return f / t; } ),
+_return(f));
+});
 
-			// <Exp> ::= <Term> + <Exp> | <Term> - <Exp> | <Term>
-			var _exp = _do(_term).doResult(
-				function(t) {
-					return _choice(
-						_do(_symbol("+"), _exp).doReturn(function(_, e) { return t + e; } ),
-						_do(_symbol("-"), _exp).doReturn(function(_, e) { return t - e; } ),
-						_return(t));
-				});
-
+// <Exp> ::= <Term> + <Exp> | <Term> - <Exp> | <Term>
+var _exp = _do(_term).doResult(
+function(t) {
+return _choice(
+_do(_symbol("+"), _exp).doReturn(function(_, e) { return t + e; } ),
+_do(_symbol("-"), _exp).doReturn(function(_, e) { return t - e; } ),
+_return(t));
+});
+*/
 			// Executor
 			function parse(input) {
 				var rdiv  = document.getElementById('rdiv'),

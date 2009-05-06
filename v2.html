@@ -31,17 +31,19 @@ var _line = _do(_values, _eol).doReturn(function(vs, _) { return vs; });
 var _csv = _many(_line);
 */
 		$P().do().many($P().noneOf(",\n")).join('', trim).register("csv_value");
-		var csv_next_values = function() { $P().choice(
-				$P().do().char(",").bind(csv_values).reduce(function(vs) { return vs[1]; }), 
-				$P().return([]));
-			};
-		var csv_values = $P().do().csv_value().bind(csv_next_values()).reduce(function(rv) { alert(rv); });
-		$P().do().bind(csv_values).eol().reduce(function(vs) { return vs[0]; }).register("csv_line");
+		P4JS.lib.csv_values = function() { 
+			return this.pushParser(function(vs) {
+				this.runParser($P().do().csv_value().csv_next_values().reduce(), vs);
+			}); };
+		$P().choice(
+			$P().do().char(",").csv_values().reduce(function(vs) { return vs[1]; }), 
+			$P().return([])).register("csv_next_values");
+		$P().do().csv_values().eol().reduce(function(vs) { return vs[0]; }).register("csv_line");
 		$P().many($P().csv_line()).register("csv");
 
 //		try {
-			var p = $P().csv_line();
-			var r = p.parse('a1,a2,a3\nb1,b2,b3');
+			var p = $P().csv();
+			var r = p.parse('a1,a2,a3\nb1,b2,b3\n');
 			alert(r);
 //		} catch(e) {
 //			alert("Exception: " + ((e.print)? e.print() : e));

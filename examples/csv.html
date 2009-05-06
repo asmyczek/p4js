@@ -8,42 +8,20 @@
 		</style>
 		<script type="text/javascript" src="../src/p4.js"></script>
 		<script type="text/javascript">
-      		var p = P4JS;
 
-            // Parsers used for csv
-            var _do       = p._do,
-                _return   = p._return,
-                _many     = p._many,
-                _noneOf   = p._noneOf,
-                _choice   = p._choice,
-                _char     = p._char,
-                _eol      = p._eol,
-                cons      = p.cons,
-                joinArray = p.joinArray;
-
-            // Trim string helper
-            var trim = function(str) {
-              return str.replace(/^\s+|\s+$/g, '');
-            };
-
-            // Parse one cs-value
-            var _value = _do(_many(_noneOf(",\n"))).doReturn(joinArray("", trim));
-
-            // Parse values: first plus next values
-            var _values = function(state) {
-              return _do(_value, _next_values).doReturn(cons)(state);
-            };
-
-            // Parse next values
-            var _next_values = _choice(
-                  _do(_char(","), _values).doReturn(function(_,vs) { return vs; }), 
-                  _return([]));
-
-            // Parse one line
-            var _line = _do(_values, _eol).doReturn(function(vs, _) { return vs; });
-           
-            // And the csv parser
-            var _csv = _many(_line);
+      var trim = function(str) { return str.replace(/^\s+|\s+$/g, ''); };
+      var concat = function(rv) { return [].concat(rv[0], rv[1]) };
+      $P().do().many($P().noneOf(",\n")).join('', trim).register("csv_value");
+      P4JS.lib.csv_values = function() { 
+        return this.bind(function(vs) { 
+            this.runParser($P().do().csv_value().csv_next_values().reduce(concat), vs); 
+        }); 
+      };
+      $P().choice(
+        $P().do().char(",").csv_values().reduce(function(vs) { return vs[1]; }), 
+        $P().return([])).register("csv_next_values");
+      $P().do().csv_values().eol().reduce(function(vs) { return vs[0]; }).register("csv_line");
+      $P().many($P().csv_line()).register("csv");
 
 			function parse_csv(input) {
 				var table = document.getElementById('table'),
@@ -59,8 +37,9 @@
 				}
 
 				// Parse and print results or error
+        var p = $P().csv();
 				try {
-					var result = p.parse(_csv, input);
+					var result = p.parse(input);
 					var rows = result, r;
 					for (r = 0; r < rows.length; r++) {
 						var row = document.createElement('tr')
@@ -73,7 +52,7 @@
 						};
 					};
 				} catch(e) {
-					error.innerHTML = p.errorToString(e);
+					error.innerHTML = p.print();
 				}
 			};
 		</script>

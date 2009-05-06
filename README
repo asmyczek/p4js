@@ -1,2 +1,62 @@
-Javascript parser library
+JavaScript parser library
+
+Quick Introduction
+-------------------
+
+The function $P() creates a parser object. This object provides
+the default parser combinators, the parse function and helpers
+to for example register new combinators with the default library.
+
+The basic monadic combinators are:
+$P().return(value) - writes value to the result stack
+$P().bind(function(vs) { ... }) - applies function on the value stack
+$P().failure(error message);  - throws exception with error message
+
+$P().item() reads one char from the input, for example the parser
+var p = $P().item()
+will return ['a'] for p.parse('abc');
+
+Since every combinator function returns the parser object itself,
+the parsers can be chained. For example the following parser
+var p = $P().item().item().item()
+will return ['a', 'b', 'c'] for parse('abc')
+
+The result of multiple parsers can be combined using the do/reduce action:
+$P().do().item().item().item().join().parse('abc') will return ['abc'].
+Join is a reduce function with a predefined function like
+function(result_values) { return result_values.join('') };
+
+$P().digit() reads a number char from the input and throws a parser error
+in case the next char is not a number.
+
+$P().many(p) applies parser p as many times as possible. For example:
+var m1 = $P().many($P().digit());
+will return ['1', '2', '3'] for m1.parse('123abc');
+
+Combined with JavaScript parseInt function:
+var m2 = $P().do().many($P().digit()).reduce(function(rv) { return parseInt(rv.join('')); });
+m2.parse('123abc')[0] will return the integer 123;
+
+m2 can be added to the default parser library using the register() function.
+For example: m2.register('integer') will register m2 under the name 'integer'
+and can be used from now on as $P().integer().
+
+The following parser converts a property list to a JavaScript object:
+
+$P().do().seq().char('=').seq().eol().reduce(
+	function(rv, vs) { return [rv[0], rv[2]]; }
+	).register('p2o_line');
+$P().do().many($P().p2o_line()).reduce(buildObject).register('p2o');
+
+var buildObject = function(result) {
+		var obj = {};
+		for (var i = 0; i < result.length; i++) obj[result[i][0]] = result[i][1];
+		return obj;
+	};
+
+The parser
+$P().p2o().parse('name1=value1 \n name2=value2 \n')
+will return an object like { name1 : 'value1', name2 : 'value2' }.
+
+For additional information see examples, source code documentation or unit tests.
 

@@ -104,5 +104,14 @@
 		</script>
 		</p>
 
+		<p>
+		<div><b>Other</b></div>
+		<script type="text/javascript">
+    var p = $P().do().many($P().digit()).join();
+		assert($P().item().attach(p).item(), "a123b", ["a", "123", "b"], "attach");
+    var q = $P().item().attach(p);
+		assert($P().attach(q).item(), "a123b", ["a", "123", "b"], "attach in attach");
+		</script>
+		</p>
 	</body>
 </html>
