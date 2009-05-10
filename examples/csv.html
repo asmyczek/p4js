@@ -9,18 +9,16 @@
 		<script type="text/javascript" src="../src/p4.js"></script>
 		<script type="text/javascript">
 
-      var trim = function(str) { return str.replace(/^\s+|\s+$/g, ''); };
-      var concat = function(rv) { return [].concat(rv[0], rv[1]) };
+      var trim    = function(str) { return str.replace(/^\s+|\s+$/g, ''); };
+      var concat  = function(rv) { return [].concat(rv[0], rv[1] || []) };
+
       $P().do().many($P().noneOf(",\n")).join('', trim).register("csv_value");
-      P4JS.lib.csv_values = function() { 
-        return this.bind(function(vs) { 
-            this.runParser($P().do().csv_value().csv_next_values().reduce(concat), vs); 
+      P4JS.lib.csv_values = function() { // Recursion, using bind/runParser explicitly
+        return this.bind(function(vs) { this.runParser(
+            $P().do().csv_value().try($P().do().char(",").csv_values().element(1)).reduce(concat), vs); 
         }); 
       };
-      $P().choice(
-        $P().do().char(",").csv_values().reduce(function(vs) { return vs[1]; }), 
-        $P().return([])).register("csv_next_values");
-      $P().do().csv_values().eol().reduce(function(vs) { return vs[0]; }).register("csv_line");
+      $P().do().csv_values().eol().element(0).register("csv_line");
       $P().many($P().csv_line()).register("csv");
 
 			function parse_csv(input) {
@@ -52,7 +50,8 @@
 						};
 					};
 				} catch(e) {
-					error.innerHTML = p.print();
+				  var err = (e.print !== undefined)? e.print() : e;
+				  error.innerHTML = err;
 				}
 			};
 		</script>

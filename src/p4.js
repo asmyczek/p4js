@@ -76,7 +76,7 @@ var P4JS = $P = function() {
     s.backup    = function()  { backup.push(deepCopyArray(stack)); };
     s.restore   = function()  { if (backup.length == 0) throw "No result stack backup!"
                                 stack = backup.pop(); };
-    s.clear     = function()  { backup.pop(); };
+    s.release   = function()  { backup.pop(); };
     s.print     = function()  { return printArray(stack); };
     return s;
   };
@@ -138,16 +138,7 @@ var P4JS = $P = function() {
     // Helper function to run parsers passed as arguments e.g. to many()
     // If p fails, state and result state are reseted
     c.runParser = function(p, rs) {
-      try {
-        rs.backup();
-        this.state.backup();
         p.parseWithState(this.state, rs);
-        rs.clear();
-      } catch (e) {
-        rs.restore();
-        this.state.restore();
-        throw e;
-      }
     };
 
     // Helper function used by do-reduce
@@ -157,7 +148,7 @@ var P4JS = $P = function() {
         var v = (!f)? rv : f.apply(this, [rv, rs]);
         if (v !== undefined) {
           rs.pushValue(v);
-        }
+        } 
       });
     };
 
@@ -289,14 +280,26 @@ P4JS.lib = {
     return this.bind(function(rs) { 
       for (var i = 0; i < ps.length; i++) {
         try {
+          rs.backup();
+          this.state.backup();
           this.runParser(ps[i], rs);
+          rs.release();
           return;
         } catch (e) {
           if (!e.type || e.type !== "parse_error") throw e;
+          rs.restore();
+          this.state.restore();
         }
       }
       throw this.error("No parser match for 'choice'!");
     });
+  },
+
+  // Try parse a and b in case a fails.
+  // Throws exception if parser b fails as well.
+  // If b not defined, fail safe with $P().return().
+  try : function(a, b) {
+    return this.choice(a, b || $P().return());
   },
 
   // Read expected char from input and throw exception if char does not match
@@ -349,11 +352,7 @@ P4JS.lib = {
   // Returns element at the index i form result array
   // and applies function f on it
   element : function(i, f) { return this.popValueStack(function(rv, rs) { 
-      if (i < rv.length) {
-        var v = rv[i];
-        return (!f)? v : f.apply(this, [v, rs]);
-      }
-      throw this.error("Invalid result length!");
+      return (!f)? rv[i] : f.apply(this, [rv[i], rs]);
     });
   },
 
@@ -374,10 +373,15 @@ P4JS.lib = {
     return this.bind(function(rs) { 
         try { 
           while (true) {
+            rs.backup();
+            this.state.backup();
             this.runParser(p, rs); 
-            }
+            rs.release();
+          }
         } catch (e) { 
           if (!e.type || e.type !== "parse_error") throw e;
+          rs.restore();
+          this.state.restore();
         }
     });
   },

@@ -9,16 +9,16 @@
 		<script type="text/javascript" src="../src/p4.js"></script>
 		<script type="text/javascript">
 
-    var buildObject = function(result) {
-      var obj = {};
-      for (var i = 0; i < result.length; i++) {
-        obj[result[i][0]] = result[i][1];
-      }
-      return obj;
-    };
+			var buildObject = function(result, vs) {
+			  var obj = {};
+			  for (var i = 0; i < result.length; i++) {
+				obj[result[i][0]] = result[i][1];
+			  }
+			  return obj;
+			};
 
-		$P().do().seq().char('=').seq().eol().reduce(function(rv) { return [rv[0], rv[2]]; }).register('p2o_line');
-		$P().do().many($P().p2o_line()).reduce(buildObject).register('p2o');
+			$P().do().seq().char('=').seq().eol().reduce(function(rv) { return [rv[0], rv[2]]; }).register('p2o_line');
+			$P().do().many($P().p2o_line()).reduce(buildObject).register('p2o');
 
 			function parse_csv(input) {
 				var table = document.getElementById('table'),
@@ -52,7 +52,8 @@
             }
           }
 				} catch(e) {
-					error.innerHTML = p.print();
+				  var err = (e.print !== undefined)? e.print() : e;
+				  error.innerHTML = err;
 				}
 			};
 		</script>
@@ -77,5 +78,6 @@ name3 = value3
 			<table id="table" class="table"></table>
 			<div id="error" style="color:red;"></div>
 		</p>
+
 	</body>
 </html>

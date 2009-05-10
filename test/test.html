@@ -79,6 +79,8 @@
 		assert($P().choice($P().char('a'), $P().char('b')), "a", ["a"], "choice(1)");
 		assert($P().choice($P().char('a'), $P().char('b')), "b", ["b"], "choice(2)");
 		assert($P().choice($P().item().item().digit(), $P().item()), "abc", ["a"], "choice(with fail first)");
+		assert($P().try($P().digit(), $P().item()), "abc", ["a"], "try");
+		assertException($P().try($P().digit(), $P().digit()), "abc", "try(exception)");
 		assert($P().many($P().digit()), "123", ["1","2","3"], "many");
 		assert($P().many($P().digit()), "abc", [], "many(empty)");
 		assert($P().do().many($P().digit()).join(), "123", ["123"], "do.many(digit).join");
@@ -114,6 +116,7 @@
 		assert($P().item().attach(p).item(), "a123b", ["a", "123", "b"], "attach");
     var q = $P().item().attach(p);
 		assert($P().attach(q).item(), "a123b", ["a", "123", "b"], "attach in attach");
+    assert($P().do().item().reduce(function(v) { return undefined; }).item(), "abc", ['b'], "reduce returns null");
 		</script>
 		</p>
 	</body>
