@@ -40,30 +40,67 @@ var P4JS = $P = function() {
   //
   var createResultStack = function() {
     // Private stack reference
-    var stack = [[]];
+    var stack  = [[]],
+        backup = [];
 
     var assertNotEmpty = function() {
       if (stack.length === 0) throw "Invalid parser, value stack is empty!";
+    };
+  
+    var isArray = function(arr) {
+      return (!arr)? false : ({}.toString.call(arr).indexOf("Array")) > -1;
+    }
+    
+    var deepCopyArray = function(arr) {
+      var r = arr.slice();
+      for (var i = 0; i < r.length; i++) {
+        if (isArray(r[i])) r[i] = deepCopyArray(r[i]);
+      }
+      return r;
+    };
+
+    var printArray = function(arr) {
+      var r = '';
+      for (var i = 0; i < arr.length; i++) {
+        r += (isArray(arr[i]))? printArray(arr[i]) : arr[i];
+        if (i + 1 < arr.length) r += ", ";
+      }
+      return '[' + r + ']';
     };
 
     var s = {};
     s.top       = function()  { assertNotEmpty(); return stack[stack.length - 1]; };
     s.pushValue = function(v) { assertNotEmpty(); stack[stack.length - 1].push(v); };
-    s.push      = function()  { stack.push([]); return this; };
+    s.push      = function()  { stack.push([]); return s; };
     s.pop       = function()  { assertNotEmpty(); return stack.pop(); };
+    s.backup    = function()  { backup.push(deepCopyArray(stack)); };
+    s.restore   = function()  { if (backup.length == 0) throw "No result stack backup!"
+                                stack = backup.pop(); };
+    s.clear     = function()  { backup.pop(); };
+    s.print     = function()  { return printArray(stack); };
     return s;
   };
  
   // ------------------------------------------------------------------------
   // Create the internal parse state
   //
-  var createState = function(input, data, line, column) {
+  var createState = function(input, data) {
+    var backup;
+
     var s = { input    : input
-            , line     : line || 1 
-            , column   : column || 0
+            , line     : 1 
+            , column   : 1
             , data     : data };
-    s.nextLine = function()  { this.line++; this.column = 0; };
-    s.nextChar = function () { this.column++; };
+    s.nextLine = function() { this.line++; this.column = 0; };
+    s.nextChar = function() { this.column++; };
+    s.backup   = function() { backup = createState(this.input, this.data); 
+                              backup.line = this.line;
+                              backup.column = this.column; };
+    s.restore  = function() { if (!backup) throw "No state backup!"
+                              this.input  = backup.input;
+                              this.data   = backup.data;
+                              this.line   = backup.line;
+                              this.column = backup.column; };
     return s;
   };
 
@@ -86,7 +123,7 @@ var P4JS = $P = function() {
     // The three monadic operators
     // return, bind and failure
     c.return = function(v) {
-      return this.bind(function(vs) { vs.pushValue(v); });
+      return this.bind(function(rs) { rs.pushValue(v); });
     };
 
     c.bind = function(f) {
@@ -95,23 +132,31 @@ var P4JS = $P = function() {
     };
 
     c.failure = function(error_message) {
-      return this.bind(function(vs) { throw this.error(error_message); });
+      return this.bind(function(rs) { throw this.error(error_message); });
     };
 
     // Helper function to run parsers passed as arguments e.g. to many()
-    c.runParser = function(p, vs) {
-      var v = p.parseWithState(createState(this.state.input, this.state.data, this.state.line, this.state.column));
-      for (var i = 0; i < v.length; i++) vs.pushValue(v[i]);
-      this.state = p.state;
+    // If p fails, state and result state are reseted
+    c.runParser = function(p, rs) {
+      try {
+        rs.backup();
+        this.state.backup();
+        p.parseWithState(this.state, rs);
+        rs.clear();
+      } catch (e) {
+        rs.restore();
+        this.state.restore();
+        throw e;
+      }
     };
 
     // Helper function used by do-reduce
     c.popValueStack = function(f) {
-      return this.bind(function(vs) { 
-        var rv = vs.pop();
-        var v = (!f)? rv : f.apply(this, [rv]);
+      return this.bind(function(rs) { 
+        var rv = rs.pop();
+        var v = (!f)? rv : f.apply(this, [rv, rs]);
         if (v !== undefined) {
-          vs.pushValue(v);
+          rs.pushValue(v);
         }
       });
     };
@@ -138,25 +183,26 @@ var P4JS = $P = function() {
 
     // Main parse method creates new parse state object
     c.parse = function(input, data) {
-      return this.parseWithState(createState(input, data));
+      var rs = createResultStack();
+      this.parseWithState(createState(input, data), rs);
+      return rs.top();
     };
 
     // Helper method used by runParser() 
     // The passed state is a state copy of the caller parser
-    c.parseWithState = function(state) {
+    c.parseWithState = function(state, rs) {
       this.state = state;
-      var vs = createResultStack();
       for (var i = 0; i < parser_stack.length; i++) {
-        parser_stack[i].apply(this, [vs]);
+        parser_stack[i].apply(this, [rs]);
       }
-      return vs.top();
     };
 
     // Register this parser in the default lib under argument name.
     // Returns false if a parser for name exists already, true otherwise.
     c.register = function(name) {
+      var cp;
       if (P4JS.lib[name] !== undefined) {
-        return false;
+        cp = P4JS.lib[name];
       }
 
       var ps = [];
@@ -171,12 +217,19 @@ var P4JS = $P = function() {
         }
         return this;
       };
-      return true;
+      return cp;
     };
 
     // Return not consumed input
     c.input = function() {
       return this.state.input;
+    };
+
+    // Basic logging attaches log message to element with elementId
+    // or default 'p4js_log' if elementId not defined
+    c.log = function(msg, elementId) {
+      var l = document.getElementById(elementId || 'p4js_log');
+      if (l) l.innerHTML += "<br/>" + msg;
     };
 
     return c;
@@ -196,13 +249,13 @@ P4JS.lib = {
 
   // Read one char and push on the current stack
   item : function() {
-    return this.bind(function(vs) { 
+    return this.bind(function(rs) { 
       var s = this.state;
       if (!s.input || s.input === '') {
         throw this.error("Empty input!");
       } else {
         var ch = s.input[0];
-        vs.pushValue(ch); 
+        rs.pushValue(ch); 
         s.input = s.input.slice(1); 
         (ch === "\n")? s.nextLine() : s.nextChar();
       }
@@ -233,16 +286,16 @@ P4JS.lib = {
   // Throws exception if all parser fail to consume the input
   choice : function() {
     var ps = Array.prototype.slice.apply(arguments);
-    return this.bind(function(vs) { 
+    return this.bind(function(rs) { 
       for (var i = 0; i < ps.length; i++) {
         try {
-          this.runParser(ps[i], vs);
+          this.runParser(ps[i], rs);
           return;
         } catch (e) {
           if (!e.type || e.type !== "parse_error") throw e;
         }
       }
-      throw this.error("No parser match in 'choice'!");
+      throw this.error("No parser match for 'choice'!");
     });
   },
 
@@ -261,34 +314,56 @@ P4JS.lib = {
 
   // Pushes a new array on the result stack
   // All values are pushed to the new array and
-  // combined using the reduce function.
-  // Every do operator has to be followed by a matching reduce.
-  do : function() { return this.bind(function(vs) { vs.push(); }) },
+  // combined using the reduce function, so
+  // every do operator must be followed by a matching reduce.
+  // All combinators can be chained between do-reduce
+  // or passed as argument to do(), if not defined
+  // in the default lib.
+  do : function() { 
+    this.bind(function(rs) { rs.push(); });
+    var ps = Array.prototype.slice.apply(arguments);
+    for (var i = 0; i < ps.length; i++) {
+      (function(t, p) { t.bind(function(rs) { t.runParser(p, rs); }); }(this, ps[i]));
+    }
+    return this;
+  },
 
   // General reduce operator with custom function.
   // The function takes the result array from the matching 
-  // do operator as argument.
+  // do operator as argument and the optional result stack
+  // for mainly debug purpose.
   reduce : function(f) { return this.popValueStack(f); },
 
   // Custom reduce, joins the result values using c and
   // applies function f to the result. Both arguments
   // are optional.
-  join : function(c, f) { return this.popValueStack(function(rv) { 
+  join : function(c, f) { return this.popValueStack(function(rv, rs) { 
       if (rv.length > 0) {
         var v = rv.join(c || ''); 
-        return (!f)? v : f(v);
+        return (!f)? v : f.apply(this, [v, rs]);
       }
       return undefined;
+    });
+  },
+
+  // Returns element at the index i form result array
+  // and applies function f on it
+  element : function(i, f) { return this.popValueStack(function(rv, rs) { 
+      if (i < rv.length) {
+        var v = rv[i];
+        return (!f)? v : f.apply(this, [v, rs]);
+      }
+      throw this.error("Invalid result length!");
     });
   },
 
   // Custom reduce that joins and converts the result to integer
   // The optional function f is applied to the resulting integer
   int : function(f) {
-    return this.popValueStack(function(rv) { 
+    return this.popValueStack(function(rv, rs) { 
       if (rv.length > 0) {
         var v = parseInt(rv.join(''));
-        return (!f)? v : f(v);
+        return (!f)? v : f.apply(this, [v, rs]);
       };
       return undefined;
     });
@@ -296,7 +371,15 @@ P4JS.lib = {
 
   // Apply parser p as many times as possible
   many : function(p) {
-    return this.bind(function(vs) { try { while (true) this.runParser(p, vs); } catch (e) { } });
+    return this.bind(function(rs) { 
+        try { 
+          while (true) {
+            this.runParser(p, rs); 
+            }
+        } catch (e) { 
+          if (!e.type || e.type !== "parse_error") throw e;
+        }
+    });
   },
 
   // Apply parser p at least once
@@ -319,24 +402,24 @@ P4JS.lib = {
 
   // Execute external defined
   attach : function(p) {
-    return this.bind(function(vs) { this.runParser(p, vs); });
+    return this.bind(function(rs) { this.runParser(p, rs); });
   },
 
   // -- Tokenizer --
 
-  // Consume space chars
-  space : function() {
-    return this.do().many($P().sat(this.isSpace)).reduce(function(rv) { return undefined; });
+  // Consume many space chars
+  spaces : function() {
+    return this.do().many($P().space()).reduce(function(rv) { return undefined; });
   },
 
   // Trim spaces before and after the input parsed by p
   token : function(p) { 
-    return this.do().space().attach(p).space().reduce(function(rv) { return rv[0]; });
+    return this.do().spaces().attach(p).spaces().element(0);
   },
 
   // Parse alpha-num token
   seq : function() {
-    return this.token($P().do().many($P().sat(this.isAlphaNum, "Not an AlphaNum!")).join());
+    return this.token($P().do().many1($P().alphanum()).join());
   },
 
   // Read expected symbol or throw an exception
@@ -349,7 +432,7 @@ P4JS.lib = {
 
   // Check for end of input
   eoi : function() {
-    return this.bind(function(vs) { if (this.state.input && this.state.input !== '') throw this.error("Not EOI!"); });
+    return this.bind(function(rs) { if (this.state.input && this.state.input !== '') throw this.error("Not EOI!"); });
   }
 
 };

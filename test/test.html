@@ -20,22 +20,22 @@
 
 			// Assert function
 			var assert = function(parser, input, result, desc) {
-				try {
+				//try {
 					var value = parser.parse(input);
 					if (value.equal(result)) {
 						ok(desc);
 					} else {
 						error(desc, "Error: expecting '" + result + "' but result is '" + value + "' !");
 					}
-				} catch(e) {
-					error(desc, "Exception: " + e.message);
-				}
+				//} catch(e) {
+				//	error(desc, "Exception: " + e.message);
+				//}
 			};
 
 			// Assert exception is thrown
 			var assertException = function(parser, input, desc) {
 				try {
-					var value = p.parse(parser, input);
+					var value = parser.parse(input);
 					error(desc, "Exception expected, but not thrown!");
 				} catch(e) {
 					ok(desc);
@@ -57,7 +57,7 @@
 
 		<p>
         <div><b>Basic combinators</b></div>
-		<script type="text/javascript">
+        <script type="text/javascript">
 		assert($P().return("abc"), "", ["abc"], "return");
 
 		assertException($P().failure("Exception"), "abc", "failure");
@@ -72,12 +72,13 @@
 		assert($P().return('abc').item(), "d", ["abc","d"], "return.item");
 		assert($P().item().item().item(), "abc", ["a","b","c"], "3x item");
 		assert($P().do().item().item().item().join(), "abc", ["abc"], "do.3x item.join");
+		assert($P().do($P().item(), $P().item(), $P().item()).join(), "abc", ["abc"], "do with args");
 
 		assert($P().char("a"), "a", ["a"], "char");
 		assert($P().string("ab1"), "ab1", ["ab1"], "string");
 		assert($P().choice($P().char('a'), $P().char('b')), "a", ["a"], "choice(1)");
 		assert($P().choice($P().char('a'), $P().char('b')), "b", ["b"], "choice(2)");
-
+		assert($P().choice($P().item().item().digit(), $P().item()), "abc", ["a"], "choice(with fail first)");
 		assert($P().many($P().digit()), "123", ["1","2","3"], "many");
 		assert($P().many($P().digit()), "abc", [], "many(empty)");
 		assert($P().do().many($P().digit()).join(), "123", ["123"], "do.many(digit).join");
@@ -87,20 +88,22 @@
 		assert($P().oneOf("abc"), "a", "a", "oneOf");
 		assertException($P().oneOf("abc"), "1abc,", "oneOf(negative)");
 		assert($P().noneOf("abc"), "1", "1", "noneOf");
-		assertException($P().noneOf("abc"), "abc,", "noneOf(negative)");
+    assertException($P().noneOf("abc"), "abc,", "noneOf(negative)");
+		assert($P().do().item().item().item().element(1), "abc", ["b"], "do.element");
+		assertException($P().do().item().item().item().element(5), "abc,", "do.element(exception)");
 		</script>
 		</p>
 
 		<p>
 		<div><b>Tokenizer</b></div>
-		<script type="text/javascript">
-		assert($P().space(), "  ", "", "space");
+    <script type="text/javascript">
+		assert($P().spaces(), "  ", "", "space");
 		assert($P().token($P().string("ab1")), "  ab1   ", ["ab1"], "token");
 		assert($P().seq(), "  ab1   ", ["ab1"], "seq");
 		assert($P().symbol("ab1"), "  ab1   ", ["ab1"], "symbol");
 		assert($P().eol(), "\n", ["\n"], "eol");
 		assert($P().eoi(), "", [], "eoi (empty input)");
-		assert($P().eoi(), undefined, [], "eoi (undefined input)");
+    assert($P().eoi(), undefined, [], "eoi (undefined input)");
 		</script>
 		</p>
 
