@@ -118,19 +118,10 @@ var P4JS = $P = function() {
     // The parser state
     c.state = undefined;
 
-    // The three monadic operators
-    // return, bind and failure
-    c.return = function(v) {
-      return this.bind(function(rs) { rs.pushValue(v); });
-    };
-
+    // Bind pushes parser function to stack
     c.bind = function(f) {
       parser_stack.push(f);
       return this;
-    };
-
-    c.failure = function(error_message) {
-      return this.bind(function(rs) { throw this.error(error_message); });
     };
 
     // Helper function to run parsers passed as arguments e.g. to many()
@@ -149,26 +140,6 @@ var P4JS = $P = function() {
         } 
       });
     };
-
-    // Create parser error object thrown in exceptions
-    c.error = function(err) {
-      return { type    : "parse_error",
-               message : err,
-               state   : this.state,
-               print   : function() {
-               return "Parser Error: " + err + 
-                      " at (line " + this.state.line + 
-                      ", column " + this.state.column + ")";
-             } };
-    };
-
-    // Some helpers for sat() combinator
-    c.isDigit    = function(ch)    { return ((ch >= "0") && (ch <= "9")); };
-    c.isLower    = function(ch)    { return ((ch >= "a") && (ch <= "z")); };
-    c.isUpper    = function(ch)    { return ((ch >= "A") && (ch <= "Z")); };
-    c.isAlpha    = function(ch)    { return this.isLower(ch) || this.isUpper(ch); };
-    c.isAlphaNum = function(ch)    { return this.isAlpha(ch) || this.isDigit(ch); };
-    c.isSpace    = function(ch)    { return ((ch === ' ') || (ch === '\t')); };
 
     // Main parse method creates new parse state object
     c.parse = function(input, data) {
@@ -219,13 +190,6 @@ var P4JS = $P = function() {
       return this.state.data;
     };
 
-    // Basic logging attaches log message to element with elementId
-    // or default 'p4js_log' if elementId not defined
-    c.log = function(msg, elementId) {
-      var l = document.getElementById(elementId || 'p4js_log');
-      if (l) { l.innerHTML += "<br/>" + msg; }
-    };
-
     return c;
   };
 
@@ -241,6 +205,16 @@ var P4JS = $P = function() {
 //
 P4JS.lib = {
 
+  // The monadic operators
+  // return and failure
+  return : function(v) {
+    return this.bind(function(rs) { rs.pushValue(v); });
+  },
+
+  failure : function(error_message) {
+    return this.bind(function(rs) { throw this.error(error_message); });
+  },
+
   // Read one char and push on the current stack
   item : function() {
     return this.bind(function(rs) { 
@@ -255,6 +229,14 @@ P4JS.lib = {
       }
     });
   },
+
+  // Some helpers for sat() combinator
+  isDigit    : function(ch)    { return ((ch >= "0") && (ch <= "9")); },
+  isLower    : function(ch)    { return ((ch >= "a") && (ch <= "z")); },
+  isUpper    : function(ch)    { return ((ch >= "A") && (ch <= "Z")); },
+  isAlpha    : function(ch)    { return this.isLower(ch) || this.isUpper(ch); },
+  isAlphaNum : function(ch)    { return this.isAlpha(ch) || this.isDigit(ch); },
+  isSpace    : function(ch)    { return ((ch === ' ') || (ch === '\t')); },
 
   // Read next char from input and validate it using f
   // Throws exception if f() returns false
@@ -442,6 +424,27 @@ P4JS.lib = {
     return this.bind(function(rs) { 
       if (this.state.input && this.state.input !== '') { throw this.error("Not parsed input '" + this.input() + "'!"); }
     });
+  },
+
+  // Some helpers, overwrite if required
+
+  // Basic logging attaches log message to element with elementId
+  // or default 'p4js_log' if elementId not defined
+  log : function(msg, elementId) {
+    var l = document.getElementById(elementId || 'p4js_log');
+    if (l) { l.innerHTML += "<br/>" + msg; }
+  },
+
+  // Create parser error object thrown in exceptions
+  error : function(err) {
+    return { type    : "parse_error",
+             message : err,
+             state   : this.state,
+             print   : function() {
+             return "Parser Error: " + err + 
+                    " at (line " + this.state.line + 
+                    ", column " + this.state.column + ")";
+           } };
   }
 
 };
