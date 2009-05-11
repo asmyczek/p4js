@@ -216,6 +216,11 @@ var P4JS = $P = function() {
       return this.state.input;
     };
 
+    // Return data passed to parser
+    c.data = function() {
+      return this.state.data;
+    };
+
     // Basic logging attaches log message to element with elementId
     // or default 'p4js_log' if elementId not defined
     c.log = function(msg, elementId) {

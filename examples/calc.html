@@ -63,7 +63,7 @@
 				error.innerHTML = "";
 
 				// Parse and print results or error
-        var p = $P().exp();
+        var p = $P().exp().eoi();
 				try {
 					var result = p.parse(input)[0];
 					rdiv.innerHTML = result;
