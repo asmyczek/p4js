@@ -47,25 +47,23 @@ var P4JS = $P = function() {
       if (stack.length === 0) { throw "Invalid parser, value stack is empty!"; }
     };
   
-    var isArray = function(arr) {
-      return (!arr)? false : ({}.toString.call(arr).indexOf("Array")) > -1;
-    };
-    
-    var deepCopyArray = function(arr) {
-      var r = arr.slice();
-      for (var i = 0; i < r.length; i++) {
-        if (isArray(r[i])) { r[i] = deepCopyArray(r[i]); }
-      }
-      return r;
-    };
-
     var printArray = function(arr) {
       var r = '';
       for (var i = 0; i < arr.length; i++) {
-        r += (isArray(arr[i]))? printArray(arr[i]) : arr[i];
+        if (arr[i] && ({}.toString.call(arr[i]).indexOf("Array")) > -1) {
+          r += printArray(arr[i]);
+        } else {
+          r += arr[i];
+        }
         if (i + 1 < arr.length) { r += ", "; }
       }
       return '[' + r + ']';
+    };
+
+    var copyStack = function() {
+      var r = [];
+      for (var i = 0; i < stack.length; i++) { r[i] = stack[i].slice(); }
+      return r;
     };
 
     var s = {};
@@ -73,7 +71,7 @@ var P4JS = $P = function() {
     s.pushValue = function(v) { assertNotEmpty(); stack[stack.length - 1].push(v); };
     s.push      = function()  { stack.push([]); return s; };
     s.pop       = function()  { assertNotEmpty(); return stack.pop(); };
-    s.backup    = function()  { backup.push(deepCopyArray(stack)); };
+    s.backup    = function()  { backup.push(copyStack()); };
     s.restore   = function()  { if (backup.length === 0) { throw "No result stack backup!"; }
                                 stack = backup.pop(); };
     s.release   = function()  { backup.pop(); };
