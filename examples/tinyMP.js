@@ -9,7 +9,7 @@ var TinyMP = function() {
                   , "rgb(180, 0  , 180)"
                   , "rgb(180, 180, 180)" ];
 
-  // Rage of the graph display
+  // Range of the graph display
   // from -(graph_x_range/2) to (graph_x_range/2)
   var graph_x_range = 12;
 
@@ -231,7 +231,7 @@ var TinyMP = function() {
                           graphCount = data['graphCount'],
                           rangeDiff  = graph_x_range / width,
                           mvars      = [];
-
+                          
                       // Copy vars
                       var v;
                       for (v in vars) mvars[v] = vars[v];
@@ -300,18 +300,21 @@ var TinyMP = function() {
                   ctx.lineTo(center.x, canvas.height);
                   ctx.stroke();
 
+                  // draw tic marks
                   var vdiff = canvas.width / graph_x_range;
+                  var num_tics = graph_x_range / 2 + 1;
+                  var tic_length = 6;
                   var i;
-                  for (i = 1; i < 7; i++) {
+                  for (i = 1; i < num_tics; i++) {
                     ctx.beginPath();
                     ctx.moveTo(center.x + i * vdiff, center.y);
-                    ctx.lineTo(center.x + i * vdiff, center.y + (graph_x_range/2));
+                    ctx.lineTo(center.x + i * vdiff, center.y + tic_length);
                     ctx.moveTo(center.x - i * vdiff, center.y);
-                    ctx.lineTo(center.x - i * vdiff, center.y + (graph_x_range/2));
+                    ctx.lineTo(center.x - i * vdiff, center.y + tic_length);
                     ctx.moveTo(center.x, center.y + i * vdiff);
-                    ctx.lineTo(center.x + (graph_x_range/2), center.y + i * vdiff);
+                    ctx.lineTo(center.x + tic_length, center.y + i * vdiff);
                     ctx.moveTo(center.x, center.y - i * vdiff);
-                    ctx.lineTo(center.x + (graph_x_range/2), center.y - i * vdiff);
+                    ctx.lineTo(center.x + tic_length, center.y - i * vdiff);
                     ctx.stroke();
                   }
                 }
