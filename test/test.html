@@ -92,7 +92,6 @@
 		assert($P().noneOf("abc"), "1", "1", "noneOf");
     assertException($P().noneOf("abc"), "abc,", "noneOf(negative)");
 		assert($P().do().item().item().item().element(1), "abc", ["b"], "do.element");
-		assertException($P().do().item().item().item().element(5), "abc,", "do.element(exception)");
 		</script>
 		</p>
 

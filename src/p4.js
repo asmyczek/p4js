@@ -44,17 +44,17 @@ var P4JS = $P = function() {
         backup = [];
 
     var assertNotEmpty = function() {
-      if (stack.length === 0) throw "Invalid parser, value stack is empty!";
+      if (stack.length === 0) { throw "Invalid parser, value stack is empty!"; }
     };
   
     var isArray = function(arr) {
       return (!arr)? false : ({}.toString.call(arr).indexOf("Array")) > -1;
-    }
+    };
     
     var deepCopyArray = function(arr) {
       var r = arr.slice();
       for (var i = 0; i < r.length; i++) {
-        if (isArray(r[i])) r[i] = deepCopyArray(r[i]);
+        if (isArray(r[i])) { r[i] = deepCopyArray(r[i]); }
       }
       return r;
     };
@@ -63,7 +63,7 @@ var P4JS = $P = function() {
       var r = '';
       for (var i = 0; i < arr.length; i++) {
         r += (isArray(arr[i]))? printArray(arr[i]) : arr[i];
-        if (i + 1 < arr.length) r += ", ";
+        if (i + 1 < arr.length) { r += ", "; }
       }
       return '[' + r + ']';
     };
@@ -74,7 +74,7 @@ var P4JS = $P = function() {
     s.push      = function()  { stack.push([]); return s; };
     s.pop       = function()  { assertNotEmpty(); return stack.pop(); };
     s.backup    = function()  { backup.push(deepCopyArray(stack)); };
-    s.restore   = function()  { if (backup.length == 0) throw "No result stack backup!"
+    s.restore   = function()  { if (backup.length === 0) { throw "No result stack backup!"; }
                                 stack = backup.pop(); };
     s.release   = function()  { backup.pop(); };
     s.print     = function()  { return printArray(stack); };
@@ -87,16 +87,16 @@ var P4JS = $P = function() {
   var createState = function(input, data) {
     var backup;
 
-    var s = { input    : input
-            , line     : 1 
-            , column   : 1
-            , data     : data };
+    var s = { input    : input,
+              line     : 1,
+              column   : 1,
+              data     : data };
     s.nextLine = function() { this.line++; this.column = 0; };
     s.nextChar = function() { this.column++; };
     s.backup   = function() { backup = createState(this.input, this.data); 
                               backup.line = this.line;
                               backup.column = this.column; };
-    s.restore  = function() { if (!backup) throw "No state backup!"
+    s.restore  = function() { if (!backup) { throw "No state backup!"; }
                               this.input  = backup.input;
                               this.data   = backup.data;
                               this.line   = backup.line;
@@ -154,10 +154,10 @@ var P4JS = $P = function() {
 
     // Create parser error object thrown in exceptions
     c.error = function(err) {
-      return { type    : "parse_error"
-             , message : err
-             , state   : this.state
-             , print   : function() {
+      return { type    : "parse_error",
+               message : err,
+               state   : this.state,
+               print   : function() {
                return "Parser Error: " + err + 
                       " at (line " + this.state.line + 
                       ", column " + this.state.column + ")";
@@ -220,7 +220,7 @@ var P4JS = $P = function() {
     // or default 'p4js_log' if elementId not defined
     c.log = function(msg, elementId) {
       var l = document.getElementById(elementId || 'p4js_log');
-      if (l) l.innerHTML += "<br/>" + msg;
+      if (l) { l.innerHTML += "<br/>" + msg; }
     };
 
     return c;
@@ -248,7 +248,7 @@ P4JS.lib = {
         var ch = s.input[0];
         rs.pushValue(ch); 
         s.input = s.input.slice(1); 
-        (ch === "\n")? s.nextLine() : s.nextChar();
+        if (ch === "\n") { s.nextLine() } else { s.nextChar(); }
       }
     });
   },
@@ -286,7 +286,7 @@ P4JS.lib = {
           rs.release();
           return;
         } catch (e) {
-          if (!e.type || e.type !== "parse_error") throw e;
+          if (!e.type || e.type !== "parse_error") { throw e; }
           rs.restore();
           this.state.restore();
         }
@@ -310,7 +310,7 @@ P4JS.lib = {
   // Read expected string from input and throw exception if string does not match
   string : function(s) {
     var p = this.do();
-    for (var i = 0; i < s.length; i++) p = p.char(s[i]);
+    for (var i = 0; i < s.length; i++) { p = p.char(s[i]); }
     p.join();
     return this;
   },
@@ -363,7 +363,7 @@ P4JS.lib = {
       if (rv.length > 0) {
         var v = parseInt(rv.join(''));
         return (!f)? v : f.apply(this, [v, rs]);
-      };
+      }
       return undefined;
     });
   },
@@ -379,7 +379,7 @@ P4JS.lib = {
             rs.release();
           }
         } catch (e) { 
-          if (!e.type || e.type !== "parse_error") throw e;
+          if (!e.type || e.type !== "parse_error") { throw e; }
           rs.restore();
           this.state.restore();
         }
@@ -436,9 +436,10 @@ P4JS.lib = {
 
   // Check for end of input
   eoi : function() {
-    return this.bind(function(rs) { if (this.state.input && this.state.input !== '') throw this.error("Not EOI!"); });
+    return this.bind(function(rs) { 
+      if (this.state.input && this.state.input !== '') { throw this.error("Not parsed input '" + this.input() + "'!"); }
+    });
   }
 
 };
-
 
