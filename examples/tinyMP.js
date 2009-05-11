@@ -108,7 +108,7 @@ var TinyMP = function() {
   var power = function(a, b) { 
     return { 
       eval  : $P().do(a.eval, b.eval).reduce(function(rv) { return Math.pow(rv[0], rv[1]); }),
-      diff  : $P().bind(function(vs) { return this.runParser($P().return(mult(b, power(a, brackets(minus(constant(1), b))))), vs); }),
+      diff  : $P().bind(function(vs) { return this.runParser($P().return(mult(b, power(a, brackets(minus(b, constant(1)))))), vs); }),
       print : $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + "^" + rv[1]; })
     };
   };
