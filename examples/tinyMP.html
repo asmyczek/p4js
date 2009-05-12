@@ -24,7 +24,7 @@
 				try {
 					tmp.parse(input);
 				} catch(e) {
-				  var err = (e.print !== undefined)? e.print() : (e.message !== undefined)? e.message : e;
+          var err = (e.print !== undefined)? e.print() : e;
 					error.innerHTML = err;
 				}
 			};
@@ -72,13 +72,13 @@ draw(z,x)
           <div style="margin-left:14px;">
 
           <p>
-          The processor supports following arithmetic operations:<br/>
-          <b>+</b>, <b>-</b>, <b>*</b>, <b>/</b>, <b>^</b>(power), <b>=</b>(assignment), 
+          Following operations are supported:<br/>
+          <b>+</b>, <b>-</b>, <b>*</b>, <b>/</b>, <b>^</b>(power), <b>~</b>(square root), <b>=</b>(assignment) and<br/>
           <b>'var</b>(derivation in a variable <i>var</i>)
           </p>
 
           <p>
-          and commands:<br/>
+          And commands:<br/>
           <b>eval(exp)</b> - evaluate an expression and print the result.<br/>
           <b>print(exp)</b> - print the expression.<br/>
           <b>draw(exp,var)</b> - chart the expression for variable <i>var</i>.<br/>

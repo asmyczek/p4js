@@ -41,7 +41,7 @@ var TinyMP = function() {
       eval  : $P().bind(function(vs) {
                 var v = this.input()[x];
                 if (!v) {
-                  throw { type: "Evaluation error", message : "Variable '" + x + "' not defined!" };
+                  throw error("Variable '" + x + "' not defined!", this);
                 } else {
                   return this.runParser($P().return(v.eval.parse(this.input())[0]), vs);
                 }
@@ -134,11 +134,11 @@ var TinyMP = function() {
     if (v.length === 1) {
       vars[v] = b;
     } else {
-      throw { type: "Evaluation error", message : "Left side of an assigment is not a variable, one char expected!" };
+      throw error("Left side of an assigment is not a variable, one char expected!", this);
     }
     return {
-      eval  : function() { throw { type: "Evaluation error", message : "Cannot evaluate an assignment!" }; },
-      diff  : function() { throw { type: "Evaluation error", message : "Cannot diff on an assignment!" }; },
+      eval  : function() { throw error("Cannot evaluate an assignment!"); },
+      diff  : function() { throw error("Cannot diff on an assignment!"); },
       print : $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + "=" + rv[1]; })
     };
   };
@@ -170,10 +170,10 @@ var TinyMP = function() {
   };
 
   // Expo
-  P4JS.lib.expo = function() { 
+  P4JS.lib.prim = function() { 
     return this.bind(function(vs) { this.runParser(
       $P().do().factor().choice(
-        $P().symbol("^").expo().reduce(function(rv) { return power(rv[0], rv[2]); } ),
+        $P().symbol("^").prim().reduce(function(rv) { return power(rv[0], rv[2]); } ),
         $P().symbol("'").token($P().lower()).reduce(function(rv) { return diff_exp(rv[0], rv[2], this.state.data.vars); }),
         $P().symbol("=").exp().reduce(function(rv) { return assig(rv[0], rv[2], this.state.data.vars); }),
         $P().element(0)), vs);
@@ -183,7 +183,7 @@ var TinyMP = function() {
   // Term
   P4JS.lib.term = function() { 
     return this.bind(function(vs) { this.runParser(
-      $P().do().expo().choice(
+      $P().do().prim().choice(
         $P().symbol("*").term().reduce(function(rv) { return mult(rv[0], rv[2]); } ),
         $P().symbol("/").term().reduce(function(rv) { return div(rv[0], rv[2]); } ),
         $P().element(0)), vs);
@@ -272,6 +272,13 @@ var TinyMP = function() {
                       data['graphCount'] = graphCount + 1;
                     }
                   };
+
+  // Create error message
+  var error = function(err, p) {
+    var e = p.error(err);
+    e.type = "Evaluation error";
+    return e;
+  };
 
   // Print to output
   var print = function(v, ul) {

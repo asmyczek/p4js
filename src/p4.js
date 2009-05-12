@@ -441,9 +441,8 @@ P4JS.lib = {
              message : err,
              state   : this.state,
              print   : function() {
-             return "Parser Error: " + err + 
-                    " at (line " + this.state.line + 
-                    ", column " + this.state.column + ")";
+             return "Error: " + err +
+                    " (line " + this.state.line + ", column " + this.state.column + ")";
            } };
   }
 

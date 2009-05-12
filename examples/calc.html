@@ -12,31 +12,31 @@
           $P().symbol(".").nat().reduce(function(rv) { while(rv[2] > 1.0) rv[2] /= 10; return rv[0] + rv[2]; }),
           $P().element(0)).register('num');
       
-			// <Factor> ::= <Num> | ( <Exp> ) | - <Factor>
+      // <Factor> ::= <Num> | ( <Exp> ) | - <Factor> | ~<Exp>
       // Mutual references, using bind for lazy evaluation
 			P4JS.lib.factor = function() { 
         return this.bind(function(vs) { this.runParser(
             $P().choice(
 								$P().do().symbol("(").exp().symbol(")").element(1),
-								$P().do().symbol("-").factor().element(1, function(f) { return 0.0 - f; }),
+                $P().do().symbol("-").factor().element(1, function(f) { return 0.0 - f; }),
 								$P().do().symbol("~").exp().element(1, function(f) { return Math.sqrt(f); } ),
 								$P().num()), vs);
             });
 			};
 
-      // <Expo> ::=  <Factor> * <Expo> | <Factor> / <Expo> | <Factor>
-			P4JS.lib.expo = function() { 
+      // <Prim> ::=  <Factor> ^ <Prim> | <Factor>
+			P4JS.lib.prim = function() { 
         return this.bind(function(vs) { this.runParser(
           $P().do().factor().choice(
-                $P().symbol("^").expo().reduce(function(rv) { return Math.pow(rv[0], rv[2]); } ),
+                $P().symbol("^").prim().reduce(function(rv) { return Math.pow(rv[0], rv[2]); } ),
                 $P().element(0)), vs);
             });
 			};
       
-      // <Term> ::=  <Expo> * <Term> | <Expo> / <Term> | <Expo>
+      // <Term> ::=  <Prim> * <Term> | <Expo> / <Term> | <Prim>
 			P4JS.lib.term = function() { 
         return this.bind(function(vs) { this.runParser(
-          $P().do().expo().choice(
+          $P().do().prim().choice(
                 $P().symbol("*").term().reduce(function(rv) { return rv[0] * rv[2]; } ),
                 $P().symbol("/").term().reduce(function(rv) { return rv[0] / rv[2]; } ),
                 $P().element(0)), vs);
@@ -78,14 +78,29 @@
 	<body>
 			<h3>A simple expression parser</h3>
 
-		<p>
-			<span>Expression:</span>
-      <input type="text" id="expression" value="4.2 * (1.5 + 2)^2 - 9.45"></input>
-			<a href="javascript:;" onclick="parse(document.getElementById('expression').value);">Parse</a>
-		</p>
+    <table cellpadding="10px">
+      <tr>
+        <td valign="top">
+          <p>
+            <span>Expression:</span>
+            <input type="text" id="expression" value="4.2 * (1.5 + 2)^2 - 9.45"></input><br/>
+            <a href="javascript:;" onclick="parse(document.getElementById('expression').value);">Parse</a>
+          </p>
 
-		<p>
-			Result: <span id="rdiv"></span> <span id="error" style="color:red;"></span>
-		</p>
+          <p>
+            Result: <span id="rdiv"></span> <span id="error" style="color:red;"></span>
+          </p>
+        </td>
+
+        <td valign="top">
+          <p>
+          Supported operations are: 
+          <b>+</b>, <b>-</b>, <b>*</b>, <b>/</b>, <b>^</b>(power) and <b>~</b>(square root).<br/>
+          The operators are right associative, for example:<br/>
+          <code>2 -1 -1</code> is parsed to <code>2 -(1 -1)</code> which results in <code>2</code>.
+          </p>
+        </td>
+      </tr>
+
 	</body>
 </html>
