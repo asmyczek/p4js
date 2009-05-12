@@ -16,12 +16,14 @@ var TinyMP = function() {
   // -- Arithmetic elements -------------------------------------------------
 
   // Every arithmetic element is an object that provides following functions:
+  // left()  - left associate expression tree
   // eval()  - evaluate the element
   // diff()  - differentiate expression
   // print() - pretty print the element
 
   var constant = function(c) { 
     return { 
+      left  : function() { return this; },
       eval  : $P().return(c),
       diff  : $P().bind(function(vs) { this.runParser($P().return(constant(0)), vs); }),
       print : $P().return(c)
@@ -30,6 +32,9 @@ var TinyMP = function() {
 
   var brackets  = function(a) { 
     return { 
+      a     : a,
+      op    : brackets,
+      left  : function() { return a.left(); },
       eval  : $P().do(a.eval).element(0),
       diff  : $P().do(a.diff).element(0,function(x) { return brackets(x); }),
       print : $P().do(a.print).element(0, function(x) { return "(" + x + ")"; })
@@ -38,6 +43,7 @@ var TinyMP = function() {
 
   var variable = function(x) { 
     return { 
+      left  : function() { return this; },
       eval  : $P().bind(function(vs) {
                 var v = this.input()[x];
                 if (!v) {
@@ -73,60 +79,73 @@ var TinyMP = function() {
     };
   };
 
+  var unary = function(a, op) {
+    return { a    : a,
+             op   : op,
+             left : function() { return associate_left(this.op, a); } };
+  };
+
+  var binary = function(a, b, op) {
+    return { a    : a,
+             b    : b,
+             op   : op,
+             left : function() { return associate_left(this.op, a, b); } };
+  };
+
   var add = function(a, b) { 
-    return { 
-      eval  : $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] + rv[1]; }),
-      diff  : $P().do(a.diff, b.diff).reduce(function(rv) { return add(rv[0], rv[1]); }),
-      print : $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " + " + rv[1]; })
-    };
+    var r = binary(a, b, add);
+    r.eval  = $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] + rv[1]; });
+    r.diff  = $P().do(a.diff, b.diff).reduce(function(rv) { return add(rv[0], rv[1]); });
+    r.print = $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " + " + rv[1]; });
+    return r;
   };
 
   var minus = function(a, b) { 
-    return { 
-      eval  : $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] - rv[1]; }),
-      diff  : $P().do(a.diff, b.diff).reduce(function(rv) { return minus(rv[0], rv[1]); }),
-      print : $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " - " + rv[1]; })
-    };
+    var r = binary(a, b, minus);
+    r.eval  = $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] - rv[1]; });
+    r.diff  = $P().do(a.diff, b.diff).reduce(function(rv) { return minus(rv[0], rv[1]); });
+    r.print = $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " - " + rv[1]; });
+    return r;
   };
 
   var mult = function(a, b) { 
-    return { 
-      eval  : $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] * rv[1]; }),
-      diff  : $P().do(a.diff, b.diff).reduce(function(rv) { return add(mult(rv[0], b), mult(a, rv[1])); }),
-      print : $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " * " + rv[1]; })
-    };
+    var r = binary(a, b, mult);
+    r.eval  = $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] * rv[1]; });
+    r.diff  = $P().do(a.diff, b.diff).reduce(function(rv) { return add(mult(rv[0], b), mult(a, rv[1])); });
+    r.print = $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " * " + rv[1]; });
+    return r;
   };
 
   var div = function(a, b) { 
-    return { 
-      eval  : $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] / rv[1]; }),
-      diff  : $P().do(a.diff, b.diff).reduce(function(rv) { return div(minus(mult(rv[0], b), mult(a, rv[1])), brackets(power(b, 2))); }),
-      print : $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " / " + rv[1]; })
-    };
+    var r = binary(a, b, div);
+    r.eval  = $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] / rv[1]; });
+    r.diff  = $P().do(a.diff, b.diff).reduce(function(rv) { return div(minus(mult(rv[0], b), mult(a, rv[1])), brackets(power(b, 2))); });
+    r.print = $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " / " + rv[1]; });
+    return r;
   };
 
   var power = function(a, b) { 
-    return { 
-      eval  : $P().do(a.eval, b.eval).reduce(function(rv) { return Math.pow(rv[0], rv[1]); }),
-      diff  : $P().bind(function(vs) { return this.runParser($P().return(mult(b, power(a, brackets(minus(b, constant(1)))))), vs); }),
-      print : $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + "^" + rv[1]; })
-    };
+    var r = binary(a, b, power);
+    r.eval  = $P().do(a.eval, b.eval).reduce(function(rv) { return Math.pow(rv[0], rv[1]); });
+    r.diff  = $P().bind(function(vs) { return this.runParser($P().return(mult(b, power(a, brackets(minus(b, constant(1)))))), vs); });
+    r.print = $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + "^" + rv[1]; });
+    return r;
   };
 
   var sqrt = function(a) { 
-    return { 
-      eval  : $P().do(a.eval).element(0, function(x) { return Math.sqrt(x); }),
-      diff  : $P().bind(function(vs) { return this.runParser($P().return(mult(constant(0.5), power(a, brackets(neg(constant(0.5)))))), vs); }),
-      print : $P().do(a.print).element(0, function(x) { return "~" + x; })
-    };
+    var r = unary(a, sqrt);
+    r.eval  = $P().do(a.eval).element(0, function(x) { return Math.sqrt(x); });
+    r.diff  = $P().bind(function(vs) { return this.runParser($P().return(mult(constant(0.5), power(a, brackets(neg(constant(0.5)))))), vs); });
+    r.print = $P().do(a.print).element(0, function(x) { return "~" + x; });
+    return r;
   };
 
   var neg = function(a) { 
-    return { 
-      eval  : $P().do(a.eval).element(0, function(x) { return 0.0 - x; }),
-      diff  : $P().do(a.diff).element(0, function(x) { return neg(x); }),
-      print : $P().do(a.eval).element(0, function(x) { return "-" + x; })
-    };
+    var r = unary(a, neg);
+    r.eval  = $P().do(a.eval).element(0, function(x) { return 0.0 - x; });
+    r.diff  = $P().do(a.diff).element(0, function(x) { return neg(x); });
+    r.print = $P().do(a.eval).element(0, function(x) { return "-" + x; });
+    return r;
   };
 
   var assig = function(a, b, vars) {
@@ -137,6 +156,7 @@ var TinyMP = function() {
       throw error("Left side of an assigment is not a variable, one char expected!", this);
     }
     return {
+      left  : function() { throw error("Cannot evaluate an assignment!"); },
       eval  : function() { throw error("Cannot evaluate an assignment!"); },
       diff  : function() { throw error("Cannot diff on an assignment!"); },
       print : $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + "=" + rv[1]; })
@@ -207,6 +227,13 @@ var TinyMP = function() {
 
   // -- Processor functions -------------------------------------------------
 
+  var associate_left = function(operator, a, b) {
+    if (b !== undefined) {
+      return (b.b !== undefined)? associate_left(b.op, operator(a, b.a), b.b) : operator(a, b);
+    }
+    return (a.b !== undefined)? associate_left(a.op, operator(a.a), a.b) : operator(a);
+  };
+
   // Differentiate on diff_var
   var diff_exp  = function(exp, diff_var, vars) {
                     return exp.diff.parse(vars, diff_var)[0];
@@ -214,7 +241,7 @@ var TinyMP = function() {
 
   // Evaluate expression
   var eval_exp  = function(exp, vars, ul) {
-                    print(exp.eval.parse(vars)[0], ul);
+                    print(exp.left().eval.parse(vars)[0], ul);
                   };
 
   // Print an expression
@@ -255,7 +282,7 @@ var TinyMP = function() {
                       var px;
                       for (px = 0; px < width; px++) {
                         mvars[x_var] = constant(px2value(px));
-                        y = exp.eval.parse(mvars)[0];
+                        y = exp.left().eval.parse(mvars)[0];
                         if ((y !== Infinity) && (y !== Infinity)) {
                           if (drawing) {
                             ctx.lineTo(px, value2px(y));
@@ -275,7 +302,7 @@ var TinyMP = function() {
 
   // Create error message
   var error = function(err, p) {
-    var e = p.error(err);
+    var e = (p && p.error !== undefined)? p.error(err) : { print : function() { return err; } };
     e.type = "Evaluation error";
     return e;
   };
