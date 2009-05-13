@@ -8,49 +8,49 @@
 			$P().token($P().do().many1($P().digit()).int()).register('nat');
 
 			// Number parser
-      $P().do().nat().choice(
-          $P().symbol(".").nat().reduce(function(rv) { while(rv[2] > 1.0) rv[2] /= 10; return rv[0] + rv[2]; }),
-          $P().element(0)).register('num');
-      
-      // <Factor> ::= <Num> | ( <Exp> ) | - <Factor> | ~<Exp>
-      // Mutual references, using bind for lazy evaluation
+			$P().do().nat().choice(
+				$P().symbol(".").nat().reduce(function(rv) { while(rv[2] > 1.0) rv[2] /= 10; return rv[0] + rv[2]; }),
+				$P().element(0)).register('num');
+
+			// <Factor> ::= <Num> | ( <Exp> ) | - <Factor> | ~<Exp>
+			// Mutual references, using bind for lazy evaluation
 			P4JS.lib.factor = function() { 
-        return this.bind(function(vs) { this.runParser(
-            $P().choice(
-								$P().do().symbol("(").exp().symbol(")").element(1),
-                $P().do().symbol("-").factor().element(1, function(f) { return 0.0 - f; }),
-								$P().do().symbol("~").exp().element(1, function(f) { return Math.sqrt(f); } ),
-								$P().num()), vs);
-            });
+				return this.bind(function(vs) { this.runParser(
+					$P().choice(
+						$P().do().symbol("(").exp().symbol(")").element(1),
+						$P().do().symbol("-").factor().element(1, function(f) { return 0.0 - f; }),
+						$P().do().symbol("~").exp().element(1, function(f) { return Math.sqrt(f); } ),
+						$P().num()), vs);
+				});
 			};
 
-      // <Prim> ::=  <Factor> ^ <Prim> | <Factor>
+			// <Prim> ::=  <Factor> ^ <Prim> | <Factor>
 			P4JS.lib.prim = function() { 
-        return this.bind(function(vs) { this.runParser(
-          $P().do().factor().choice(
-                $P().symbol("^").prim().reduce(function(rv) { return Math.pow(rv[0], rv[2]); } ),
-                $P().element(0)), vs);
-            });
+				return this.bind(function(vs) { this.runParser(
+					$P().do().factor().choice(
+						$P().symbol("^").prim().reduce(function(rv) { return Math.pow(rv[0], rv[2]); } ),
+						$P().element(0)), vs);
+				});
 			};
-      
-      // <Term> ::=  <Prim> * <Term> | <Expo> / <Term> | <Prim>
+
+			// <Term> ::=  <Prim> * <Term> | <Expo> / <Term> | <Prim>
 			P4JS.lib.term = function() { 
-        return this.bind(function(vs) { this.runParser(
-          $P().do().prim().choice(
-                $P().symbol("*").term().reduce(function(rv) { return rv[0] * rv[2]; } ),
-                $P().symbol("/").term().reduce(function(rv) { return rv[0] / rv[2]; } ),
-                $P().element(0)), vs);
-            });
+				return this.bind(function(vs) { this.runParser(
+					$P().do().prim().choice(
+						$P().symbol("*").term().reduce(function(rv) { return rv[0] * rv[2]; } ),
+						$P().symbol("/").term().reduce(function(rv) { return rv[0] / rv[2]; } ),
+						$P().element(0)), vs);
+				});
 			};
 
 			// <Exp> ::= <Term> + <Exp> | <Term> - <Exp> | <Term>
 			P4JS.lib.exp = function() { 
-        return this.bind(function(vs) { this.runParser(
-          $P().do().term().choice(
-                $P().symbol("+").exp().reduce(function(rv) { return rv[0] + rv[2]; } ),
-                $P().symbol("-").exp().reduce(function(rv) { return rv[0] - rv[2]; } ),
-                $P().element(0)), vs);
-            });
+				return this.bind(function(vs) { this.runParser(
+					$P().do().term().choice(
+						$P().symbol("+").exp().reduce(function(rv) { return rv[0] + rv[2]; } ),
+						$P().symbol("-").exp().reduce(function(rv) { return rv[0] - rv[2]; } ),
+						$P().element(0)), vs);
+				});
 			};
 
 			// Executor
@@ -63,7 +63,7 @@
 				error.innerHTML = "";
 
 				// Parse and print results or error
-        var p = $P().exp().eoi();
+				var p = $P().exp().eoi();
 				try {
 					var result = p.parse(input)[0];
 					rdiv.innerHTML = result;
@@ -97,7 +97,7 @@
           Supported operations are: 
           <b>+</b>, <b>-</b>, <b>*</b>, <b>/</b>, <b>^</b>(power) and <b>~</b>(square root).<br/>
           The operators are right associative, for example:<br/>
-          <code>2 -1 -1</code> is parsed to <code>2 -(1 -1)</code> which results in <code>2</code>.
+          <code>2 -1 -1</code> is evaluated as <code>2 - (1 - 1)</code> which results in <code>2</code>.
           </p>
         </td>
       </tr>

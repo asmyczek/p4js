@@ -43,6 +43,7 @@ var TinyMP = function() {
 
   var variable = function(x) { 
     return { 
+      a     : x,
       left  : function() { return this; },
       eval  : $P().bind(function(vs) {
                 var v = this.input()[x];
@@ -149,12 +150,7 @@ var TinyMP = function() {
   };
 
   var assig = function(a, b, vars) {
-    var v = a.print.parse(vars)[0];
-    if (v.length === 1) {
-      vars[v] = b;
-    } else {
-      throw error("Left side of an assigment is not a variable, one char expected!", this);
-    }
+    vars[a.a] = b;
     return {
       left  : function() { throw error("Cannot evaluate an assignment!"); },
       eval  : function() { throw error("Cannot evaluate an assignment!"); },
