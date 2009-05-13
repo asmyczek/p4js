@@ -5,10 +5,10 @@
 		<script type="text/javascript">
 
 			// Natural number
-			$P().token($P().do().many1($P().digit()).int()).register('nat');
+			$P().token($P().do_().many1($P().digit()).int()).register('nat');
 
 			// Number parser
-			$P().do().nat().choice(
+			$P().do_().nat().choice(
 				$P().symbol(".").nat().reduce(function(rv) { while(rv[2] > 1.0) rv[2] /= 10; return rv[0] + rv[2]; }),
 				$P().element(0)).register('num');
 
@@ -17,9 +17,9 @@
 			P4JS.lib.factor = function() { 
 				return this.bind(function(vs) { this.runParser(
 					$P().choice(
-						$P().do().symbol("(").exp().symbol(")").element(1),
-						$P().do().symbol("-").factor().element(1, function(f) { return 0.0 - f; }),
-						$P().do().symbol("~").exp().element(1, function(f) { return Math.sqrt(f); } ),
+						$P().do_().symbol("(").exp().symbol(")").element(1),
+						$P().do_().symbol("-").factor().element(1, function(f) { return 0.0 - f; }),
+						$P().do_().symbol("~").exp().element(1, function(f) { return Math.sqrt(f); } ),
 						$P().num()), vs);
 				});
 			};
@@ -27,7 +27,7 @@
 			// <Prim> ::=  <Factor> ^ <Prim> | <Factor>
 			P4JS.lib.prim = function() { 
 				return this.bind(function(vs) { this.runParser(
-					$P().do().factor().choice(
+					$P().do_().factor().choice(
 						$P().symbol("^").prim().reduce(function(rv) { return Math.pow(rv[0], rv[2]); } ),
 						$P().element(0)), vs);
 				});
@@ -36,7 +36,7 @@
 			// <Term> ::=  <Prim> * <Term> | <Expo> / <Term> | <Prim>
 			P4JS.lib.term = function() { 
 				return this.bind(function(vs) { this.runParser(
-					$P().do().prim().choice(
+					$P().do_().prim().choice(
 						$P().symbol("*").term().reduce(function(rv) { return rv[0] * rv[2]; } ),
 						$P().symbol("/").term().reduce(function(rv) { return rv[0] / rv[2]; } ),
 						$P().element(0)), vs);
@@ -46,7 +46,7 @@
 			// <Exp> ::= <Term> + <Exp> | <Term> - <Exp> | <Term>
 			P4JS.lib.exp = function() { 
 				return this.bind(function(vs) { this.runParser(
-					$P().do().term().choice(
+					$P().do_().term().choice(
 						$P().symbol("+").exp().reduce(function(rv) { return rv[0] + rv[2]; } ),
 						$P().symbol("-").exp().reduce(function(rv) { return rv[0] - rv[2]; } ),
 						$P().element(0)), vs);

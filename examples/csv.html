@@ -12,13 +12,13 @@
       var trim    = function(str) { return str.replace(/^\s+|\s+$/g, ''); };
       var concat  = function(rv) { return [].concat(rv[0], rv[1] || []) };
 
-      $P().do().many($P().noneOf(",\n")).join('', trim).register("csv_value");
+      $P().do_().many($P().noneOf(",\n")).join('', trim).register("csv_value");
       P4JS.lib.csv_values = function() { // Recursion, using bind/runParser explicitly
         return this.bind(function(vs) { this.runParser(
-            $P().do().csv_value().try($P().do().char(",").csv_values().element(1)).reduce(concat), vs); 
+            $P().do_().csv_value().try_($P().do_().char(",").csv_values().element(1)).reduce(concat), vs); 
         }); 
       };
-      $P().do().csv_values().eol().element(0).register("csv_line");
+      $P().do_().csv_values().eol().element(0).register("csv_line");
       $P().many($P().csv_line()).register("csv");
 
 			function parse_csv(input) {

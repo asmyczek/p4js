@@ -199,7 +199,6 @@ var P4JS = $P = function() {
   return new P();
 };
 
-
 // ------------------------------------------------------------------------
 // A library 
 //
@@ -207,7 +206,7 @@ P4JS.lib = {
 
   // The monadic operators
   // return and failure
-  return : function(v) {
+  return_ : function(v) {
     return this.bind(function(rs) { rs.pushValue(v); });
   },
 
@@ -241,7 +240,7 @@ P4JS.lib = {
   // Read next char from input and validate it using f
   // Throws exception if f() returns false
   sat : function(f, error_msg) {
-    return this.do().item().reduce(function(rv) {
+    return this.do_().item().reduce(function(rv) {
       if (f.apply(this, [rv[0]])) { 
         return rv[0]; 
       } else { 
@@ -282,9 +281,9 @@ P4JS.lib = {
 
   // Try parse a and b in case a fails.
   // Throws exception if parser b fails as well.
-  // If b not defined, fail safe with $P().return().
-  try : function(a, b) {
-    return this.choice(a, b || $P().return());
+  // If b not defined, fail safe with $P().return_().
+  try_ : function(a, b) {
+    return this.choice(a, b || $P().return_());
   },
 
   // Read expected char from input and throw exception if char does not match
@@ -294,7 +293,7 @@ P4JS.lib = {
 
   // Read expected string from input and throw exception if string does not match
   string : function(s) {
-    var p = this.do();
+    var p = this.do_();
     for (var i = 0; i < s.length; i++) { p = p.char(s[i]); }
     p.join();
     return this;
@@ -305,9 +304,9 @@ P4JS.lib = {
   // combined using the reduce function, so
   // every do operator must be followed by a matching reduce.
   // All combinators can be chained between do-reduce
-  // or passed as argument to do(), if not defined
+  // or passed as argument to do_(), if not defined
   // in the default lib.
-  do : function() { 
+  do_ : function() { 
     this.bind(function(rs) { rs.push(); });
     var ps = Array.prototype.slice.apply(arguments);
     for (var i = 0; i < ps.length; i++) {
@@ -398,17 +397,17 @@ P4JS.lib = {
 
   // Consume many space chars
   spaces : function() {
-    return this.do().many($P().space()).reduce(function(rv) { return undefined; });
+    return this.do_().many($P().space()).reduce(function(rv) { return undefined; });
   },
 
   // Trim spaces before and after the input parsed by p
   token : function(p) { 
-    return this.do().spaces().attach(p).spaces().element(0);
+    return this.do_().spaces().attach(p).spaces().element(0);
   },
 
   // Parse alpha-num token
   seq : function() {
-    return this.token($P().do().many1($P().alphanum()).join());
+    return this.token($P().do_().many1($P().alphanum()).join());
   },
 
   // Read expected symbol or throw an exception

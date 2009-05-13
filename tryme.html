@@ -48,7 +48,7 @@ abc 123
 			<td>
 <textarea id="parser" rows="10" cols="60">
 // int parser
-$P().do().many($P().digit()).join().register('integer');
+$P().do_().many($P().digit()).join().register('integer');
 
 var p = $P().many($P().alpha()).token($P().integer());
 </textarea>

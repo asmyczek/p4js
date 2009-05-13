@@ -1,3 +1,5 @@
+// An extendet P4JS demo
+// ---------------------
 var TinyMP = function() {
 
   // Graph color map
@@ -24,9 +26,9 @@ var TinyMP = function() {
   var constant = function(c) { 
     return { 
       left  : function() { return this; },
-      eval  : $P().return(c),
-      diff  : $P().bind(function(vs) { this.runParser($P().return(constant(0)), vs); }),
-      print : $P().return(c)
+      eval  : $P().return_(c),
+      diff  : $P().bind(function(vs) { this.runParser($P().return_(constant(0)), vs); }),
+      print : $P().return_(c)
     };
   };
 
@@ -35,9 +37,9 @@ var TinyMP = function() {
       a     : a,
       op    : brackets,
       left  : function() { return a.left(); },
-      eval  : $P().do(a.eval).element(0),
-      diff  : $P().do(a.diff).element(0,function(x) { return brackets(x); }),
-      print : $P().do(a.print).element(0, function(x) { return "(" + x + ")"; })
+      eval  : $P().do_(a.eval).element(0),
+      diff  : $P().do_(a.diff).element(0,function(x) { return brackets(x); }),
+      print : $P().do_(a.print).element(0, function(x) { return "(" + x + ")"; })
     };
   };
 
@@ -50,19 +52,19 @@ var TinyMP = function() {
                 if (!v) {
                   throw error("Variable '" + x + "' not defined!", this);
                 } else {
-                  return this.runParser($P().return(v.eval.parse(this.input())[0]), vs);
+                  return this.runParser($P().return_(v.eval.parse(this.input())[0]), vs);
                 }
               }),
       diff  : $P().bind(function(vs) {
                 var v = this.input()[x];
                 var r;
                 if (v !== undefined) {
-                   return this.runParser($P().return(diff_exp(v, this.data(), this.input())), vs);
+                   return this.runParser($P().return_(diff_exp(v, this.data(), this.input())), vs);
                 } else {
                   if (this.data() === x) {
-                    return this.runParser($P().return(constant(1)), vs);
+                    return this.runParser($P().return_(constant(1)), vs);
                   } else {
-                    return this.runParser($P().return(constant(0)), vs);
+                    return this.runParser($P().return_(constant(0)), vs);
                   }
                 }
                 return r;
@@ -72,9 +74,9 @@ var TinyMP = function() {
                   // v exists, print the referenced value
                   // otherwise print the variable name
                   if (!v) {
-                    this.runParser($P().return(x), vs);
+                    this.runParser($P().return_(x), vs);
                   } else {
-                    this.runParser($P().return(v.print.parse(this.input())[0]), vs);
+                    this.runParser($P().return_(v.print.parse(this.input())[0]), vs);
                   }
               })
     };
@@ -95,57 +97,57 @@ var TinyMP = function() {
 
   var add = function(a, b) { 
     var r = binary(a, b, add);
-    r.eval  = $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] + rv[1]; });
-    r.diff  = $P().do(a.diff, b.diff).reduce(function(rv) { return add(rv[0], rv[1]); });
-    r.print = $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " + " + rv[1]; });
+    r.eval  = $P().do_(a.eval, b.eval).reduce(function(rv) { return rv[0] + rv[1]; });
+    r.diff  = $P().do_(a.diff, b.diff).reduce(function(rv) { return add(rv[0], rv[1]); });
+    r.print = $P().do_(a.print, b.print).reduce(function(rv) { return rv[0] + " + " + rv[1]; });
     return r;
   };
 
   var minus = function(a, b) { 
     var r = binary(a, b, minus);
-    r.eval  = $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] - rv[1]; });
-    r.diff  = $P().do(a.diff, b.diff).reduce(function(rv) { return minus(rv[0], rv[1]); });
-    r.print = $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " - " + rv[1]; });
+    r.eval  = $P().do_(a.eval, b.eval).reduce(function(rv) { return rv[0] - rv[1]; });
+    r.diff  = $P().do_(a.diff, b.diff).reduce(function(rv) { return minus(rv[0], rv[1]); });
+    r.print = $P().do_(a.print, b.print).reduce(function(rv) { return rv[0] + " - " + rv[1]; });
     return r;
   };
 
   var mult = function(a, b) { 
     var r = binary(a, b, mult);
-    r.eval  = $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] * rv[1]; });
-    r.diff  = $P().do(a.diff, b.diff).reduce(function(rv) { return add(mult(rv[0], b), mult(a, rv[1])); });
-    r.print = $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " * " + rv[1]; });
+    r.eval  = $P().do_(a.eval, b.eval).reduce(function(rv) { return rv[0] * rv[1]; });
+    r.diff  = $P().do_(a.diff, b.diff).reduce(function(rv) { return add(mult(rv[0], b), mult(a, rv[1])); });
+    r.print = $P().do_(a.print, b.print).reduce(function(rv) { return rv[0] + " * " + rv[1]; });
     return r;
   };
 
   var div = function(a, b) { 
     var r = binary(a, b, div);
-    r.eval  = $P().do(a.eval, b.eval).reduce(function(rv) { return rv[0] / rv[1]; });
-    r.diff  = $P().do(a.diff, b.diff).reduce(function(rv) { return div(minus(mult(rv[0], b), mult(a, rv[1])), brackets(power(b, 2))); });
-    r.print = $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + " / " + rv[1]; });
+    r.eval  = $P().do_(a.eval, b.eval).reduce(function(rv) { return rv[0] / rv[1]; });
+    r.diff  = $P().do_(a.diff, b.diff).reduce(function(rv) { return div(minus(mult(rv[0], b), mult(a, rv[1])), brackets(power(b, 2))); });
+    r.print = $P().do_(a.print, b.print).reduce(function(rv) { return rv[0] + " / " + rv[1]; });
     return r;
   };
 
   var power = function(a, b) { 
     var r = binary(a, b, power);
-    r.eval  = $P().do(a.eval, b.eval).reduce(function(rv) { return Math.pow(rv[0], rv[1]); });
-    r.diff  = $P().bind(function(vs) { return this.runParser($P().return(mult(b, power(a, brackets(minus(b, constant(1)))))), vs); });
-    r.print = $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + "^" + rv[1]; });
+    r.eval  = $P().do_(a.eval, b.eval).reduce(function(rv) { return Math.pow(rv[0], rv[1]); });
+    r.diff  = $P().bind(function(vs) { return this.runParser($P().return_(mult(b, power(a, brackets(minus(b, constant(1)))))), vs); });
+    r.print = $P().do_(a.print, b.print).reduce(function(rv) { return rv[0] + "^" + rv[1]; });
     return r;
   };
 
   var sqrt = function(a) { 
     var r = unary(a, sqrt);
-    r.eval  = $P().do(a.eval).element(0, function(x) { return Math.sqrt(x); });
-    r.diff  = $P().bind(function(vs) { return this.runParser($P().return(mult(constant(0.5), power(a, brackets(neg(constant(0.5)))))), vs); });
-    r.print = $P().do(a.print).element(0, function(x) { return "~" + x; });
+    r.eval  = $P().do_(a.eval).element(0, function(x) { return Math.sqrt(x); });
+    r.diff  = $P().bind(function(vs) { return this.runParser($P().return_(mult(constant(0.5), power(a, brackets(neg(constant(0.5)))))), vs); });
+    r.print = $P().do_(a.print).element(0, function(x) { return "~" + x; });
     return r;
   };
 
   var neg = function(a) { 
     var r = unary(a, neg);
-    r.eval  = $P().do(a.eval).element(0, function(x) { return 0.0 - x; });
-    r.diff  = $P().do(a.diff).element(0, function(x) { return neg(x); });
-    r.print = $P().do(a.eval).element(0, function(x) { return "-" + x; });
+    r.eval  = $P().do_(a.eval).element(0, function(x) { return 0.0 - x; });
+    r.diff  = $P().do_(a.diff).element(0, function(x) { return neg(x); });
+    r.print = $P().do_(a.eval).element(0, function(x) { return "-" + x; });
     return r;
   };
 
@@ -155,17 +157,17 @@ var TinyMP = function() {
       left  : function() { throw error("Cannot evaluate an assignment!"); },
       eval  : function() { throw error("Cannot evaluate an assignment!"); },
       diff  : function() { throw error("Cannot diff on an assignment!"); },
-      print : $P().do(a.print, b.print).reduce(function(rv) { return rv[0] + "=" + rv[1]; })
+      print : $P().do_(a.print, b.print).reduce(function(rv) { return rv[0] + "=" + rv[1]; })
     };
   };
 
   // -- Expression parser ---------------------------------------------------
 
   // Natural number
-  $P().token($P().do().many1($P().digit()).int()).register('nat');
+  $P().token($P().do_().many1($P().digit()).int()).register('nat');
 
   // Number parser
-  $P().do().nat().choice(
+  $P().do_().nat().choice(
       $P().symbol(".").nat().reduce(function(rv) { while(rv[2] > 1.0) rv[2] /= 10; return constant(rv[0] + rv[2]); }),
       $P().element(0, function(v) { return constant(v); })).register('num');
   
@@ -173,14 +175,14 @@ var TinyMP = function() {
   P4JS.lib.factor = function() { 
     return this.bind(function(vs) { this.runParser(
       $P().choice(
-        $P().do().symbol("(").exp().symbol(")").element(1, function(v) { return brackets(v); }),
-        $P().do().symbol("-").factor().element(1, function(f) { return neg(f); }),
-        $P().do().symbol("~").exp().element(1, function(f) { return sqrt(f); } ),
-        $P().do().symbol("eval(").exp().symbol(")").element(1, function(f) { eval_exp(f, this.state.data.vars, this.state.data.ul); }),
-        $P().do().symbol("print(").exp().symbol(")").element(1, function(f) { print_exp(f, this.state.data.vars, this.state.data.ul); }),
-        $P().do().symbol("draw(").exp().symbol(",").token($P().lower()).symbol(")").reduce(
+        $P().do_().symbol("(").exp().symbol(")").element(1, function(v) { return brackets(v); }),
+        $P().do_().symbol("-").factor().element(1, function(f) { return neg(f); }),
+        $P().do_().symbol("~").exp().element(1, function(f) { return sqrt(f); } ),
+        $P().do_().symbol("eval(").exp().symbol(")").element(1, function(f) { eval_exp(f, this.state.data.vars, this.state.data.ul); }),
+        $P().do_().symbol("print(").exp().symbol(")").element(1, function(f) { print_exp(f, this.state.data.vars, this.state.data.ul); }),
+        $P().do_().symbol("draw(").exp().symbol(",").token($P().lower()).symbol(")").reduce(
            function(vs) { draw_exp(vs[1], vs[3], this.state.data.vars, this.state.data); }),
-        $P().do().token($P().lower()).element(0, function(v) { return variable(v); }),
+        $P().do_().token($P().lower()).element(0, function(v) { return variable(v); }),
         $P().num()), vs);
     });
   };
@@ -188,7 +190,7 @@ var TinyMP = function() {
   // Expo
   P4JS.lib.prim = function() { 
     return this.bind(function(vs) { this.runParser(
-      $P().do().factor().choice(
+      $P().do_().factor().choice(
         $P().symbol("^").prim().reduce(function(rv) { return power(rv[0], rv[2]); } ),
         $P().symbol("'").token($P().lower()).reduce(function(rv) { return diff_exp(rv[0], rv[2], this.state.data.vars); }),
         $P().symbol("=").exp().reduce(function(rv) { return assig(rv[0], rv[2], this.state.data.vars); }),
@@ -199,7 +201,7 @@ var TinyMP = function() {
   // Term
   P4JS.lib.term = function() { 
     return this.bind(function(vs) { this.runParser(
-      $P().do().prim().choice(
+      $P().do_().prim().choice(
         $P().symbol("*").term().reduce(function(rv) { return mult(rv[0], rv[2]); } ),
         $P().symbol("/").term().reduce(function(rv) { return div(rv[0], rv[2]); } ),
         $P().element(0)), vs);
@@ -210,7 +212,7 @@ var TinyMP = function() {
   // Exp
   P4JS.lib.exp = function() { 
     return this.bind(function(vs) { this.runParser(
-      $P().do().term().choice(
+      $P().do_().term().choice(
           $P().symbol("+").exp().reduce(function(rv) { return add(rv[0], rv[2]); } ),
           $P().symbol("-").exp().reduce(function(rv) { return minus(rv[0], rv[2]); } ),
           $P().element(0)), vs);
@@ -218,7 +220,7 @@ var TinyMP = function() {
   };
 
   // The parser
-  $P().do().exp().eol().element(0).register('exp_line');
+  $P().do_().exp().eol().element(0).register('exp_line');
   $P().many($P().exp_line()).register('mathp');
 
   // -- Processor functions -------------------------------------------------

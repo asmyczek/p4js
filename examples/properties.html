@@ -17,8 +17,8 @@
 			  return obj;
 			};
 
-			$P().do().seq().char('=').seq().eol().reduce(function(rv) { return [rv[0], rv[2]]; }).register('p2o_line');
-			$P().do().many($P().p2o_line()).reduce(buildObject).register('p2o');
+			$P().do_().seq().char('=').seq().eol().reduce(function(rv) { return [rv[0], rv[2]]; }).register('p2o_line');
+			$P().do_().many($P().p2o_line()).reduce(buildObject).register('p2o');
 
 			function parse_csv(input) {
 				var table = document.getElementById('table'),
