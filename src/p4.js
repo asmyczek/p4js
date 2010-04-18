@@ -221,7 +221,7 @@ P4JS.lib = {
       if (!s.input || s.input === '') {
         throw this.error("Empty input!");
       } else {
-        var ch = s.input[0];
+        var ch = s.input.charAt(0);
         rs.pushValue(ch); 
         s.input = s.input.slice(1); 
         if (ch === "\n") { s.nextLine() } else { s.nextChar(); }
@@ -294,7 +294,7 @@ P4JS.lib = {
   // Read expected string from input and throw exception if string does not match
   string : function(s) {
     var p = this.do_();
-    for (var i = 0; i < s.length; i++) { p = p.char(s[i]); }
+    for (var i = 0; i < s.length; i++) { p = p.char(s.charAt(i)); }
     p.join();
     return this;
   },
